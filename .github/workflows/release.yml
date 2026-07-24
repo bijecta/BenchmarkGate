@@ -1,0 +1,68 @@
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Derive package version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release /p:Version=${{ steps.version.outputs.version }}
+
+      - name: Test
+        run: dotnet test --no-build -c Release
+
+      - name: Pack
+        run: >
+          dotnet pack src/Cedar.BenchmarkGate.Tool/Cedar.BenchmarkGate.Tool.csproj
+          --no-build -c Release
+          /p:Version=${{ steps.version.outputs.version }}
+          -o ./artifacts/packages
+
+      - name: Smoke-test installed package
+        run: |
+          dotnet tool install --tool-path ./artifacts/smoke-install \
+            --add-source ./artifacts/packages \
+            --version ${{ steps.version.outputs.version }} \
+            Cedar.BenchmarkGate.Tool
+          ./artifacts/smoke-install/cedar-benchmark-gate --version
+          ./artifacts/smoke-install/cedar-benchmark-gate --help
+
+      - name: Log in to NuGet.org
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: aamiriyouness
+
+      - name: Publish to NuGet.org
+        run: >
+          dotnet nuget push ./artifacts/packages/*.nupkg
+          --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') }}
+          files: |
+            ./artifacts/packages/*.nupkg
+            ./artifacts/packages/*.snupkg
