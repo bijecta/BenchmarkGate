@@ -1,3 +1,16 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  CI: true
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -23,15 +36,21 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore -c Release /p:Version=${{ steps.version.outputs.version }}
+        run: >
+          dotnet build
+          --no-restore
+          -c Release
+          /p:Version=${{ steps.version.outputs.version }}
 
       - name: Test
         run: dotnet test --no-build -c Release
 
       - name: Pack
         run: >
-          dotnet pack src/Cedar.BenchmarkGate.Tool/Cedar.BenchmarkGate.Tool.csproj
-          --no-build -c Release
+          dotnet pack
+          src/Cedar.BenchmarkGate.Tool/Cedar.BenchmarkGate.Tool.csproj
+          --no-build
+          -c Release
           /p:Version=${{ steps.version.outputs.version }}
           -o ./artifacts/packages
 
@@ -39,8 +58,9 @@ jobs:
         run: |
           dotnet tool install --tool-path ./artifacts/smoke-install \
             --add-source ./artifacts/packages \
-            --version ${{ steps.version.outputs.version }} \
+            --version "${{ steps.version.outputs.version }}" \
             Cedar.BenchmarkGate.Tool
+
           ./artifacts/smoke-install/cedar-benchmark-gate --version
           ./artifacts/smoke-install/cedar-benchmark-gate --help
 
