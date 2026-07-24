@@ -1,0 +1,10 @@
+{
+  "Title": "Malformed-report",
+  "Benchmarks": [
+    {
+      "Type": "Ns.Type",
+      "Method": "MethodWithoutStatistics",
+      "Parameters": ""
+    }
+  ]
+}

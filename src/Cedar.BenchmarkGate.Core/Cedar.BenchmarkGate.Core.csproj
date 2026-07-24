@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>Cedar.BenchmarkGate.Core</PackageId>
+	<IsPackable>false</IsPackable>
+    <Description>Domain model and pure evaluation logic for Cedar.BenchmarkGate. No dependency on BenchmarkDotNet, CLI frameworks, or I/O not published standalone; Internal implementation library — see Cedar.BenchmarkGate.Tool.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+  </ItemGroup>
+
+</Project>

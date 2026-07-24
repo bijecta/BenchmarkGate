@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>cedar-benchmark-gate</ToolCommandName>
+    <PackageId>Cedar.BenchmarkGate.Tool</PackageId>
+    <Description>Local-first performance regression gate for BenchmarkDotNet. No SaaS, no hosted database — baselines and policies are reviewable repository artifacts.</Description>
+    <RootNamespace>Cedar.BenchmarkGate.Tool</RootNamespace>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+	<PackageIcon>icon.png</PackageIcon>
+    <!--
+      v0.1.0-alpha.1: set explicitly here until the tag-driven release
+      workflow (Day 5) computes Version from the pushed git tag.
+    -->
+    <Version>0.1.0-alpha.1</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<InternalsVisibleTo Include="Cedar.BenchmarkGate.Tool.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cedar.BenchmarkGate.Core\Cedar.BenchmarkGate.Core.csproj" />
+    <ProjectReference Include="..\Cedar.BenchmarkGate.BenchmarkDotNet\Cedar.BenchmarkGate.BenchmarkDotNet.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+	<None Include="icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,17 @@
+{
+  "Title": "Duplicate-report",
+  "Benchmarks": [
+    {
+      "Type": "Ns.Type",
+      "Method": "SameMethod",
+      "Parameters": "N=100",
+      "Statistics": { "Mean": 1000.0 }
+    },
+    {
+      "Type": "Ns.Type",
+      "Method": "SameMethod",
+      "Parameters": "N=100",
+      "Statistics": { "Mean": 1100.0 }
+    }
+  ]
+}

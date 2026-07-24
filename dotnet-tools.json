@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "cedar.benchmarkgate.tool": {
+      "version": "0.1.0-alpha.1",
+      "commands": [
+        "cedar-benchmark-gate"
+      ],
+      "rollForward": false
+    }
+  }
+}

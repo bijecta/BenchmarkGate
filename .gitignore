@@ -1,0 +1,22 @@
+## .NET
+bin/
+obj/
+artifacts/
+*.user
+*.suo
+
+## Rider / VS
+.vs/
+.idea/
+*.DotSettings.user
+
+## Test results
+TestResults/
+*.trx
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Local NuGet feed used during development (Day 4)
+/local-packages/
