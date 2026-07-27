@@ -66,7 +66,7 @@ jobs:
         id: nuget-login
         uses: NuGet/login@v1
         with:
-          user: bijecta
+          user: AamiriYouness
 
       - name: Publish to NuGet.org
         run: >
