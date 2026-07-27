@@ -5,9 +5,18 @@ namespace Bijecta.BenchmarkGate.Core.Baseline;
 /// <summary>
 /// One approved benchmark result inside a baseline document.
 /// </summary>
+/// <param name="Identity">The benchmark this entry approves a baseline for.</param>
+/// <param name="Metrics">
+/// Metric name -> approved baseline value, in the same units and using the
+/// same metric-name keys as BenchmarkObservation.Metrics
+/// (BenchmarkObservation.MeanNanosecondsMetric / AllocatedBytesMetric).
+/// A metric present in a current observation but absent here (e.g. an old
+/// baseline captured before allocation tracking existed) is simply not
+/// evaluated for that benchmark, not treated as a failure.
+/// </param>
 public sealed record BaselineEntry(
     BenchmarkIdentity Identity,
-    double MeanNanoseconds);
+    IReadOnlyDictionary<string, double> Metrics);
 
 /// <summary>
 /// A committed, reviewable performance baseline: the set of benchmark

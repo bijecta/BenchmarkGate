@@ -10,6 +10,7 @@ All notable changes to BenchmarkGate are documented here.
 
 ### Changed
 - `BenchmarkObservation` — single `MeanNanoseconds` field replaced with a `Metrics` dictionary; added `MeasurementCount` and `StandardDeviationNanoseconds` for stability evaluation
+- `BaselineEntry.MeanNanoseconds` (double) replaced with `BaselineEntry.Metrics` (`IReadOnlyDictionary<string, double>`), same keys as `BenchmarkObservation.Metrics`. `BenchmarkBaseline` itself (Suite, dedup-by-identity, TryFind) is unchanged.
 
 ### Removed
 - `RegressionPolicy.cs` — superseded by `GatePolicy`
