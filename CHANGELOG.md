@@ -19,6 +19,7 @@ All notable changes to BenchmarkGate are documented here.
 - `BdnBenchmarkDto.DisplayInfo` — raw display string containing the job identifier (e.g. `Job-SNYTAA(...)`), for multi-job identity extraction; there is no structured `Job` field in BenchmarkDotNet's JSON export
 - `job-with-parentheses.json` test fixture and coverage — confirms the `DisplayInfo` job-token regex handles both observed shapes (bare token like `DefaultJob`, and parenthesized like `Job-SNYTAA(IterationCount=10, ...)`)
 - Baseline file schema bumped `schemaVersion` 1 → 2 (breaking, no migration): `benchmarks[].meanNanoseconds` replaced with `benchmarks[].metrics` (object keyed by metric name). v0.1 baseline files are rejected outright with a message directing the user to re-run `capture`.
+- `JunitReporter` — JUnit XML report writer, one `<testcase>` per (benchmark, metric) pair. Regressed/Missing/Unstable always render as `<failure>`; Warning only renders as `<failure>` when `--fail-on-warning` is set, so the JUnit pass/fail signal matches the process exit code instead of contradicting it. Covered by `JunitReporterTests`.
 
 
 ### Changed
