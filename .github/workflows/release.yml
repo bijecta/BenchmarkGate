@@ -48,7 +48,7 @@ jobs:
       - name: Pack
         run: >
           dotnet pack
-          src/Cedar.BenchmarkGate.Tool/Cedar.BenchmarkGate.Tool.csproj
+          src/BenchmarkGate.Tool/BenchmarkGate.Tool.csproj
           --no-build
           -c Release
           /p:Version=${{ steps.version.outputs.version }}
@@ -61,14 +61,14 @@ jobs:
             --version "${{ steps.version.outputs.version }}" \
             Cedar.BenchmarkGate.Tool
 
-          ./artifacts/smoke-install/cedar-benchmark-gate --version
-          ./artifacts/smoke-install/cedar-benchmark-gate --help
+          ./artifacts/smoke-install/benchmark-gate --version
+          ./artifacts/smoke-install/benchmark-gate --help
 
       - name: Log in to NuGet.org
         id: nuget-login
         uses: NuGet/login@v1
         with:
-          user: aamiriyouness
+          user: bijecta
 
       - name: Publish to NuGet.org
         run: >
