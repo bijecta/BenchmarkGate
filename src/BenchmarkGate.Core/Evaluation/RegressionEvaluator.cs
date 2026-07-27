@@ -6,7 +6,7 @@ namespace Bijecta.BenchmarkGate.Core.Evaluation;
 
 /// <summary>
 /// Compares a set of current observations against an approved baseline
-/// under a regression policy. Pure: no I/O, no console output, no process
+/// under a gate policy. Pure: no I/O, no console output, no process
 /// termination — see ADR-0001.
 /// </summary>
 public static class RegressionEvaluator
@@ -14,7 +14,7 @@ public static class RegressionEvaluator
     public static SuiteDecision Evaluate(
         IReadOnlyList<BenchmarkObservation> observations,
         BenchmarkBaseline baseline,
-        RegressionPolicy policy)
+        GatePolicy policy)
     {
         var decisions = new List<BenchmarkDecision>();
         var seenBaselineIdentities = new HashSet<string>(StringComparer.Ordinal);
@@ -28,10 +28,7 @@ public static class RegressionEvaluator
                 decisions.Add(new BenchmarkDecision(
                     observation.Identity,
                     BenchmarkGateStatus.New,
-                    BaselineMeanNanoseconds: null,
-                    CurrentMeanNanoseconds: observation.MeanNanoseconds,
-                    AbsoluteDeltaNanoseconds: null,
-                    RelativeDeltaPercent: null,
+                    Metrics: [],
                     Explanation: "No baseline entry exists for this benchmark."));
                 continue;
             }
@@ -50,10 +47,7 @@ public static class RegressionEvaluator
             decisions.Add(new BenchmarkDecision(
                 baselineEntry.Identity,
                 BenchmarkGateStatus.Missing,
-                BaselineMeanNanoseconds: baselineEntry.MeanNanoseconds,
-                CurrentMeanNanoseconds: null,
-                AbsoluteDeltaNanoseconds: null,
-                RelativeDeltaPercent: null,
+                Metrics: [],
                 Explanation: "This benchmark exists in the baseline but was not present in the current results."));
         }
 
@@ -63,79 +57,171 @@ public static class RegressionEvaluator
     private static BenchmarkDecision EvaluateAgainstBaseline(
         BenchmarkObservation observation,
         BaselineEntry baselineEntry,
-        RegressionPolicy policy)
+        GatePolicy policy)
     {
-        var baselineMean = baselineEntry.MeanNanoseconds;
-        var currentMean = observation.MeanNanoseconds;
-        var absoluteDelta = currentMean - baselineMean;
-
-        // Mean time is lower-is-better: a positive delta (slower) is a
-        // regression direction; a negative delta (faster) is an improvement
-        // direction. See master spec section 10 for the general formula.
-        double relativeDeltaPercent;
-        if (baselineMean == 0)
+        // Stability gates the whole benchmark before any metric is compared:
+        // a noisy sample can't say anything trustworthy either way, so we
+        // don't want a coincidentally-passing metric to mask instability.
+        if (IsUnstable(observation, policy.Stability, out var stabilityExplanation))
         {
-            // Zero-baseline: any positive absolute change is treated as an
-            // infinite relative regression. v0.1 always fails on increase
-            // from a zero baseline; the configurable zero-baseline policy
-            // from the master spec (section 8) is deferred to v0.2.
-            relativeDeltaPercent = currentMean > 0 ? double.PositiveInfinity : 0;
+            return new BenchmarkDecision(
+                observation.Identity,
+                BenchmarkGateStatus.Unstable,
+                Metrics: [],
+                stabilityExplanation);
+        }
+
+        var metricDecisions = new List<MetricDecision>();
+
+        foreach (var (metricName, metricPolicy) in policy.Metrics)
+        {
+            // A metric absent from either side isn't evaluated — it just
+            // wasn't measured (e.g. no MemoryDiagnoser enabled), not a
+            // failure and not something to fabricate a comparison for.
+            if (!observation.Metrics.TryGetValue(metricName, out var currentValue) ||
+                !baselineEntry.Metrics.TryGetValue(metricName, out var baselineValue))
+            {
+                continue;
+            }
+
+            metricDecisions.Add(EvaluateMetric(metricName, baselineValue, currentValue, metricPolicy));
+        }
+
+        var aggregateStatus = AggregateStatus(metricDecisions);
+        var explanation = metricDecisions.Count == 0
+            ? "No metrics from the policy were present in both the baseline and current observation."
+            : string.Join(" ", metricDecisions.Select(m => m.Explanation));
+
+        return new BenchmarkDecision(observation.Identity, aggregateStatus, metricDecisions, explanation);
+    }
+
+    private static bool IsUnstable(
+        BenchmarkObservation observation,
+        StabilityPolicy stability,
+        out string explanation)
+    {
+        if (observation.MeasurementCount < stability.MinimumMeasurements)
+        {
+            explanation = string.Create(CultureInfo.InvariantCulture,
+                $"Only {observation.MeasurementCount} measurements were taken, " +
+                $"below the configured minimum of {stability.MinimumMeasurements}.");
+            return true;
+        }
+
+        if (!observation.Metrics.TryGetValue(BenchmarkObservation.MeanNanosecondsMetric, out var mean) || mean == 0)
+        {
+            // No mean-time metric to compute a coefficient of variation
+            // against — nothing to gate on, so treat as stable and let the
+            // per-metric loop evaluate whatever metrics ARE present.
+            explanation = string.Empty;
+            return false;
+        }
+
+        var coefficientOfVariation = observation.StandardDeviationNanoseconds / mean;
+        if (coefficientOfVariation > stability.MaximumCoefficientOfVariation)
+        {
+            explanation = string.Create(CultureInfo.InvariantCulture,
+                $"Coefficient of variation {coefficientOfVariation:P2} exceeds the configured " +
+                $"maximum of {stability.MaximumCoefficientOfVariation:P2} " +
+                $"(stddev {FormatNanoseconds(observation.StandardDeviationNanoseconds)} " +
+                $"over mean {FormatNanoseconds(mean)}).");
+            return true;
+        }
+
+        explanation = string.Empty;
+        return false;
+    }
+
+    private static MetricDecision EvaluateMetric(
+        string metricName,
+        double baselineValue,
+        double currentValue,
+        MetricPolicy policy)
+    {
+        var formatter = MetricFormatters.For(metricName);
+        var absoluteDelta = currentValue - baselineValue;
+
+        double relativeDeltaPercent;
+        if (baselineValue == 0)
+        {
+            var movedWorse = policy.Direction == MetricDirection.LowerIsBetter
+                ? currentValue > 0
+                : currentValue < 0;
+            relativeDeltaPercent = movedWorse ? double.PositiveInfinity : 0;
         }
         else
         {
-            relativeDeltaPercent = absoluteDelta / baselineMean * 100.0;
+            var rawPercent = absoluteDelta / baselineValue * 100.0;
+            relativeDeltaPercent = policy.Direction == MetricDirection.LowerIsBetter
+                ? rawPercent
+                : -rawPercent;
         }
 
-        var isRegression =
-            relativeDeltaPercent >= policy.FailurePercent &&
-            Math.Abs(absoluteDelta) >= policy.MinimumAbsoluteChangeNanoseconds;
+        var absoluteChangeMeetsFloor = Math.Abs(absoluteDelta) >= policy.MinimumAbsoluteChange;
 
         BenchmarkGateStatus status;
         string explanation;
 
-        if (isRegression)
+        if (relativeDeltaPercent >= policy.FailurePercent && absoluteChangeMeetsFloor)
         {
             status = BenchmarkGateStatus.Regressed;
             explanation = string.Create(CultureInfo.InvariantCulture,
-                $"Mean time regressed by {relativeDeltaPercent:F2}% " +
-                $"({FormatNanoseconds(baselineMean)} -> {FormatNanoseconds(currentMean)}), " +
-                $"which is >= the configured failure threshold of {policy.FailurePercent:F2}%.");
+                $"{metricName} regressed by {relativeDeltaPercent:F2}% " +
+                $"({formatter.Format(baselineValue)} -> {formatter.Format(currentValue)}), " +
+                $">= failure threshold of {policy.FailurePercent:F2}%.");
         }
-        else if (absoluteDelta < 0 &&
-                 Math.Abs(relativeDeltaPercent) >= policy.FailurePercent &&
-                 Math.Abs(absoluteDelta) >= policy.MinimumAbsoluteChangeNanoseconds)
+        else if (relativeDeltaPercent >= policy.WarningPercent && absoluteChangeMeetsFloor)
+        {
+            status = BenchmarkGateStatus.Warning;
+            explanation = string.Create(CultureInfo.InvariantCulture,
+                $"{metricName} regressed by {relativeDeltaPercent:F2}% " +
+                $"({formatter.Format(baselineValue)} -> {formatter.Format(currentValue)}), " +
+                $">= warning threshold of {policy.WarningPercent:F2}% but below failure threshold.");
+        }
+        else if (relativeDeltaPercent <= -policy.WarningPercent && absoluteChangeMeetsFloor)
         {
             status = BenchmarkGateStatus.Improved;
             explanation = string.Create(CultureInfo.InvariantCulture,
-                $"Mean time improved by {Math.Abs(relativeDeltaPercent):F2}% " +
-                $"({FormatNanoseconds(baselineMean)} -> {FormatNanoseconds(currentMean)}).");
+                $"{metricName} improved by {Math.Abs(relativeDeltaPercent):F2}% " +
+                $"({formatter.Format(baselineValue)} -> {formatter.Format(currentValue)}).");
         }
         else
         {
             status = BenchmarkGateStatus.Passed;
             explanation = string.Create(CultureInfo.InvariantCulture,
-                $"Mean time changed by {relativeDeltaPercent:F2}% " +
-                $"({FormatNanoseconds(baselineMean)} -> {FormatNanoseconds(currentMean)}), " +
-                $"within the configured threshold of {policy.FailurePercent:F2}%.");
+                $"{metricName} changed by {relativeDeltaPercent:F2}% " +
+                $"({formatter.Format(baselineValue)} -> {formatter.Format(currentValue)}), " +
+                $"within the configured warning threshold of {policy.WarningPercent:F2}%.");
         }
 
-        return new BenchmarkDecision(
-            observation.Identity,
-            status,
-            baselineMean,
-            currentMean,
-            absoluteDelta,
-            relativeDeltaPercent,
-            explanation);
+        return new MetricDecision(metricName, status, baselineValue, currentValue, absoluteDelta, relativeDeltaPercent, explanation);
     }
 
     /// <summary>
-    /// Formats nanoseconds for embedding in <see cref="BenchmarkDecision.Explanation"/>.
-    /// This intentionally duplicates similar formatting in
+    /// Worst-wins across a benchmark's per-metric decisions:
+    /// Regressed > Warning > Missing > New > Improved > Passed.
+    /// (Unstable is handled earlier and never reaches this function.)
+    /// </summary>
+    private static BenchmarkGateStatus AggregateStatus(List<MetricDecision> metrics)
+    {
+        if (metrics.Count == 0) return BenchmarkGateStatus.Passed;
+        if (metrics.Any(m => m.Status == BenchmarkGateStatus.Regressed)) return BenchmarkGateStatus.Regressed;
+        if (metrics.Any(m => m.Status == BenchmarkGateStatus.Warning)) return BenchmarkGateStatus.Warning;
+        if (metrics.Any(m => m.Status == BenchmarkGateStatus.Improved)) return BenchmarkGateStatus.Improved;
+        return BenchmarkGateStatus.Passed;
+    }
+
+    /// <summary>
+    /// Formats a metric value for embedding in explanation text. This
+    /// intentionally duplicates similar formatting in
     /// <c>Bijecta.BenchmarkGate.Tool.Reporting.MarkdownBuilder</c> — Core must
     /// never depend on Tool (see ADR-0001's dependency direction), so a
     /// small amount of formatting duplication here is the correct tradeoff,
-    /// not an oversight.
+    /// not an oversight. Note: this assumes nanosecond-scale values: correct
+    /// for meanNanoseconds, but allocatedBytesPerOperation values will print
+    /// with the same ns/µs/ms unit suffixes, which is misleading. Flagging —
+    /// this needs a per-metric-name formatter, not a single nanosecond
+    /// formatter, before allocation numbers show up in real report output.
     /// </summary>
     private static string FormatNanoseconds(double nanoseconds) =>
         nanoseconds >= 1_000_000
