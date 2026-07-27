@@ -8,7 +8,7 @@
     <Description>Local-first performance regression gate for BenchmarkDotNet. No SaaS, no hosted database — baselines and policies are reviewable repository artifacts.</Description>
     <RootNamespace>Bijecta.BenchmarkGate.Tool</RootNamespace>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-	<PackageIcon>icon.png</PackageIcon>
+	<PackageIcon>benchmarkgate-nuget-128.png</PackageIcon>
     <!--
       v0.1.0-alpha.1: set explicitly here until the tag-driven release
       workflow (Day 5) computes Version from the pushed git tag.
@@ -27,7 +27,7 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
-	<None Include="icon.png" Pack="true" PackagePath="\" />
+	<None Include="..\..\.github\assets\benchmarkgate-nuget-128.png" Pack="true" PackagePath="" />
   </ItemGroup>
 
   <ItemGroup>
