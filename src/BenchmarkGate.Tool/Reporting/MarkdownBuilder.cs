@@ -75,19 +75,10 @@ public sealed class MarkdownBuilder
              .Replace("\r", "", StringComparison.Ordinal);
 
     /// <summary>
-    /// Formats nanoseconds as ms/µs/ns using invariant culture — shared by
-    /// every reporter so unit thresholds stay consistent in one place.
+    /// Formats a relative percentage delta with an explicit sign, invariant
+    /// culture. Not metric-specific (unlike raw values), so it stays here
+    /// rather than moving to Core.Evaluation.MetricFormatters.
     /// </summary>
-    public static string FormatNanoseconds(double? nanoseconds)
-    {
-        if (nanoseconds is not { } value) return "-";
-        return value >= 1_000_000
-            ? string.Create(CultureInfo.InvariantCulture, $"{value / 1_000_000:F3} ms")
-            : value >= 1_000
-                ? string.Create(CultureInfo.InvariantCulture, $"{value / 1_000:F3} \u00b5s")
-                : string.Create(CultureInfo.InvariantCulture, $"{value:F3} ns");
-    }
-
     public static string FormatDeltaPercent(double? deltaPercent) =>
         deltaPercent is { } delta
             ? string.Create(CultureInfo.InvariantCulture, $"{(delta >= 0 ? "+" : "")}{delta:F2}%")

@@ -29,6 +29,9 @@ All notable changes to BenchmarkGate are documented here.
 - `SuiteDecision` gained `WarningCount`/`UnstableCount`
 - `RegressionEvaluatorTests` rewritten for `GatePolicy`/multi-metric shapes; added coverage for the stability gate and `--fail-on-warning` exit-code behavior
 - `BenchmarkDotNetResultParser` — builds a `Metrics` dictionary (mean always, allocation when a `Memory` block is present) instead of a single `MeanNanoseconds` value; populates `MeasurementCount`/`StandardDeviationNanoseconds` from `Statistics.N`/`StandardDeviation`; extracts job identity from the free-text `DisplayInfo` field via regex (no structured `Job` field exists in BenchmarkDotNet's export), falling back to `"Default"` when absent or unrecognized
+- `MarkdownBuilder.FormatNanoseconds` removed — reporters now call `Core.Evaluation.MetricFormatters.For(metricName).Format(value)` directly, since Tool already depends on Core (ADR-0001) and duplicating per-metric-unit formatting a second time wasn't a real tradeoff
+- `MarkdownReporter`/`ConsoleReporter` — one row per (benchmark, metric) pair instead of a single mean-time row; suite summary gains Warning/Unstable counts
+- `JsonDecisionReporter` — schema bumped 1 → 2: flat baseline/current/delta fields replaced with a nested `metrics` array per benchmark; `Write` now takes a `failOnWarning` flag since `SuiteDecision.ExitCode` is a method
 
 
 ### Removed
