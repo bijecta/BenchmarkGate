@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./src/BenchmarkGate.Tool/icon.png" width="64" height="64" alt="BenchmarkGate" />
+  <img src="./.github/assets/benchmarkgate-icon.svg" width="40" height="40" alt="BenchmarkGate" />
 
   # BenchmarkGate
 
