@@ -14,7 +14,6 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
-
     permissions:
       contents: write
       id-token: write
@@ -59,8 +58,7 @@ jobs:
           dotnet tool install --tool-path ./artifacts/smoke-install \
             --add-source ./artifacts/packages \
             --version "${{ steps.version.outputs.version }}" \
-            Cedar.BenchmarkGate.Tool
-
+            Bijecta.BenchmarkGate.Tool
           ./artifacts/smoke-install/benchmark-gate --version
           ./artifacts/smoke-install/benchmark-gate --help
 
