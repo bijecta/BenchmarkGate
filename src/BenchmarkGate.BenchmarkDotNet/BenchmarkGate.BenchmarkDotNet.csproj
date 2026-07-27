@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>
+		<PackageId>Bijecta.BenchmarkGate.BenchmarkDotNet</PackageId>
+		<Description>Parses BenchmarkDotNet full-JSON exporter output into normalized Bijecta.BenchmarkGate.Core observations. Internal implementation library — not published standalone; see Bijecta.BenchmarkGate.Tool.</Description>
+		<RootNamespace>Bijecta.BenchmarkGate.BenchmarkDotNet</RootNamespace>
+	</PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BenchmarkGate.Core\BenchmarkGate.Core.csproj" />
+  </ItemGroup>
+
+</Project>
