@@ -8,7 +8,7 @@ namespace Bijecta.BenchmarkGate.Tool.Baseline;
 
 /// <summary>
 /// Thrown when a baseline file is malformed or unreadable. Kept separate
-/// from <c>Nijecta.BenchmarkGate.BenchmarkDotNet.Parsing.BenchmarkResultParseException</c>
+/// from <c>Bijecta.BenchmarkGate.BenchmarkDotNet.Parsing.BenchmarkResultParseException</c>
 /// since baseline files are not BenchmarkDotNet output.
 /// </summary>
 public sealed class BaselineFileException : Exception
@@ -28,15 +28,20 @@ public sealed class BaselineFileException : Exception
 }
 
 /// <summary>
-/// Reads and writes the baseline JSON file format. v0.1.0-alpha.1 uses a
-/// deliberately reduced schema (schemaVersion, suite, benchmarks[].identity,
-/// benchmarks[].meanNanoseconds) compared to the full master-spec schema
-/// (section 7), which also carries provenance and environment blocks.
-/// Those are deferred to v0.2 — see docs/baseline-schema.md.
+/// Reads and writes the baseline JSON file format.
 /// </summary>
+/// <remarks>
+/// v0.2 bumps schemaVersion 1 -> 2: benchmarks[].meanNanoseconds (single
+/// double) is replaced by benchmarks[].metrics (an object keyed by metric
+/// name). This is a deliberate breaking change with no migration path —
+/// this is a pre-1.0 internal tool with no external consumers, so
+/// schemaVersion 1 files are rejected outright rather than carrying a
+/// compatibility shim. Re-run `capture` to produce a schemaVersion 2
+/// baseline.
+/// </remarks>
 public static class BaselineFile
 {
-    private const int SupportedSchemaVersion = 1;
+    private const int SupportedSchemaVersion = 2;
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -63,11 +68,18 @@ public static class BaselineFile
             throw new BaselineFileException(path, "Baseline file deserialized to null.");
 
         if (dto.SchemaVersion != SupportedSchemaVersion)
-            throw new BaselineFileException(
-                path,
-                string.Create(System.Globalization.CultureInfo.InvariantCulture,
-                    $"Unsupported baseline schemaVersion {dto.SchemaVersion}. " +
-                    $"This build of Bijecta.BenchmarkGate supports schemaVersion {SupportedSchemaVersion}."));
+        {
+            var message = string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"Unsupported baseline schemaVersion {dto.SchemaVersion}. " +
+                $"This build of Bijecta.BenchmarkGate supports schemaVersion {SupportedSchemaVersion}.");
+
+            message += dto.SchemaVersion == 1
+                ? " schemaVersion 1 baselines (single meanNanoseconds field) are no longer " +
+                  "supported — re-run 'capture' to produce a schemaVersion 2 baseline."
+                : " Re-run 'capture' with this version of the tool to produce a supported baseline.";
+
+            throw new BaselineFileException(path, message);
+        }
 
         if (string.IsNullOrWhiteSpace(dto.Suite))
             throw new BaselineFileException(path, "Baseline file is missing 'suite'.");
@@ -81,9 +93,9 @@ public static class BaselineFile
                 throw new BaselineFileException(path, "Baseline entry identity is missing 'typeName'.");
             if (string.IsNullOrWhiteSpace(b.Identity.MethodName))
                 throw new BaselineFileException(path, "Baseline entry identity is missing 'methodName'.");
-            if (b.MeanNanoseconds is null)
+            if (b.Metrics is null || b.Metrics.Count == 0)
                 throw new BaselineFileException(
-                    path, $"Baseline entry '{b.Identity.TypeName}.{b.Identity.MethodName}' is missing 'meanNanoseconds'.");
+                    path, $"Baseline entry '{b.Identity.TypeName}.{b.Identity.MethodName}' is missing 'metrics'.");
 
             var identity = new BenchmarkIdentity(
                 b.Identity.TypeName,
@@ -91,7 +103,7 @@ public static class BaselineFile
                 b.Identity.Job ?? "Default",
                 b.Identity.Parameters ?? new Dictionary<string, string>());
 
-            entries.Add(new BaselineEntry(identity, b.MeanNanoseconds.Value));
+            entries.Add(new BaselineEntry(identity, b.Metrics));
         }
 
         // BenchmarkBaseline's constructor throws on duplicate identities.
@@ -122,7 +134,7 @@ public static class BaselineFile
                             ? new Dictionary<string, string>(o.Identity.Parameters)
                             : null,
                     },
-                    MeanNanoseconds = o.MeanNanoseconds,
+                    Metrics = new Dictionary<string, double>(o.Metrics),
                 })
                 .ToList(),
         };
@@ -147,8 +159,8 @@ public static class BaselineFile
         [JsonPropertyName("identity")]
         public BaselineIdentityDto? Identity { get; set; }
 
-        [JsonPropertyName("meanNanoseconds")]
-        public double? MeanNanoseconds { get; set; }
+        [JsonPropertyName("metrics")]
+        public Dictionary<string, double>? Metrics { get; set; }
     }
 
     private sealed class BaselineIdentityDto
