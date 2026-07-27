@@ -17,6 +17,7 @@ All notable changes to BenchmarkGate are documented here.
 - `BdnStatisticsDto.N` / `StandardDeviation` — measurement count and stddev for the stability gate (confirmed against real BenchmarkDotNet output)
 - `BdnMemoryDto` (`BytesAllocatedPerOperation`) and `BdnBenchmarkDto.Memory` — allocation metric support (confirmed against real output)
 - `BdnBenchmarkDto.DisplayInfo` — raw display string containing the job identifier (e.g. `Job-SNYTAA(...)`), for multi-job identity extraction; there is no structured `Job` field in BenchmarkDotNet's JSON export
+- `job-with-parentheses.json` test fixture and coverage — confirms the `DisplayInfo` job-token regex handles both observed shapes (bare token like `DefaultJob`, and parenthesized like `Job-SNYTAA(IterationCount=10, ...)`)
 
 
 ### Changed

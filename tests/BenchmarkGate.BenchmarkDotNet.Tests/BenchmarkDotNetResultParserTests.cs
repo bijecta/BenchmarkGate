@@ -101,4 +101,16 @@ public class BenchmarkDotNetResultParserTests
 
         act.Should().Throw<BenchmarkResultParseException>();
     }
+
+    [Fact]
+    public void Extracts_job_token_from_display_info_with_parenthesized_parameters()
+    {
+        // "Type.Method: Job-SNYTAA(IterationCount=10, ...) [N=1000000]" —
+        // job token is followed by a parenthesized parameter list, unlike
+        // the "DefaultJob" case which has no parens.
+        var observations = BenchmarkDotNetResultParser.ParseFile(FixturePath("job-with-parentheses.json"));
+
+        var observation = observations.Single();
+        observation.Identity.Job.Should().Be("Job-SNYTAA");
+    }
 }

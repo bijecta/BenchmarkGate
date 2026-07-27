@@ -1,0 +1,20 @@
+{
+  "Title": "Job-parenthesized-report",
+  "Benchmarks": [
+    {
+      "DisplayInfo": "ExceptionClassifierBenchmark.IndexedClassifier: Job-SNYTAA(IterationCount=10, LaunchCount=1, RunStrategy=Throughput, WarmupCount=3) [N=1000000]",
+      "Namespace": "CedarRecon.Tests.Performance",
+      "Type": "CedarRecon.Tests.Performance.ExceptionClassifierBenchmark",
+      "Method": "IndexedClassifier",
+      "Parameters": "N=1000000",
+      "Statistics": {
+        "N": 10,
+        "Mean": 472443770.0,
+        "StandardDeviation": 34086625.77215912
+      },
+      "Memory": {
+        "BytesAllocatedPerOperation": 598402200
+      }
+    }
+  ]
+}
