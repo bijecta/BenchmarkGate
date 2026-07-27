@@ -26,6 +26,7 @@ All notable changes to BenchmarkGate are documented here.
 - `SuiteDecision.ExitCode` (property) replaced with `GetExitCode(bool failOnWarning)` (method), since exit code now depends on the `--fail-on-warning` flag
 - `SuiteDecision` gained `WarningCount`/`UnstableCount`
 - `RegressionEvaluatorTests` rewritten for `GatePolicy`/multi-metric shapes; added coverage for the stability gate and `--fail-on-warning` exit-code behavior
+- `BenchmarkDotNetResultParser` — builds a `Metrics` dictionary (mean always, allocation when a `Memory` block is present) instead of a single `MeanNanoseconds` value; populates `MeasurementCount`/`StandardDeviationNanoseconds` from `Statistics.N`/`StandardDeviation`; extracts job identity from the free-text `DisplayInfo` field via regex (no structured `Job` field exists in BenchmarkDotNet's export), falling back to `"Default"` when absent or unrecognized
 
 
 ### Removed

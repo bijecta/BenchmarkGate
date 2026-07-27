@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Bijecta.BenchmarkGate.Core.Identity;
 using Bijecta.BenchmarkGate.Core.Model;
 
@@ -9,22 +10,24 @@ namespace Bijecta.BenchmarkGate.BenchmarkDotNet.Parsing;
 /// <see cref="BenchmarkObservation"/> values.
 /// </summary>
 /// <remarks>
-/// v0.1.0-alpha.1 simplification: BenchmarkDotNet's full JSON export does
-/// not carry a simple top-level "job id" string the way the master spec's
-/// canonical identity example assumes. Until job-aware parsing is added
-/// (tracked for v0.2, once we have real multi-job fixtures from Bijecta Recon),
-/// every parsed benchmark is assigned the fixed job name "Default". This
-/// means v0.1 cannot yet distinguish the same benchmark run under two
-/// different BenchmarkDotNet jobs in a single result set — acceptable for
-/// Bijecta Recon's current single-job CI usage, not acceptable for v1.
+/// v0.2: job identity is extracted from the free-text 'DisplayInfo' field
+/// (there is no structured Job field in BenchmarkDotNet's JSON export). The
+/// observed shape is "&lt;prefix&gt;: &lt;job-token&gt;[(params)] [Parameters]",
+/// e.g. "MismatchScan: DefaultJob [N=1000000]" or
+/// "Type.Method: Job-SNYTAA(IterationCount=10, ...) [N=1000000]". If the
+/// pattern isn't found (DisplayInfo missing or unrecognized shape), falls
+/// back to "Default" — matching v0.1 behavior for result sets with no
+/// job information at all.
 /// </remarks>
 public static class BenchmarkDotNetResultParser
 {
     private const string DefaultJob = "Default";
 
-    /// <summary>
-    /// Parses a single BenchmarkDotNet full-JSON report file.
-    /// </summary>
+    // Matches ": " followed by a run of non-whitespace, non-'(' characters
+    // — the job token, whether or not it's followed by a parenthesized
+    // parameter list (Job-SNYTAA(...) vs DefaultJob with no parens).
+    private static readonly Regex JobTokenPattern = new(@": (?<job>[^\s(]+)", RegexOptions.Compiled);
+
     public static IReadOnlyList<BenchmarkObservation> ParseFile(string path)
     {
         if (!File.Exists(path))
@@ -77,12 +80,6 @@ public static class BenchmarkDotNetResultParser
         return observations;
     }
 
-    /// <summary>
-    /// Parses every *.json file found under <paramref name="path"/> (if it's
-    /// a directory) or the single file at <paramref name="path"/>. Duplicate
-    /// identities across multiple files are rejected the same as within one
-    /// file, since they refer to the same logical benchmark.
-    /// </summary>
     public static IReadOnlyList<BenchmarkObservation> ParsePath(string path)
     {
         if (File.Exists(path))
@@ -128,9 +125,35 @@ public static class BenchmarkDotNetResultParser
                 sourceFile,
                 $"Benchmark '{dto.Type}.{dto.Method}' is missing 'Statistics.Mean'.");
 
-        var parameters = BdnParameterStringParser.Parse(dto.Parameters);
-        var identity = new BenchmarkIdentity(dto.Type, dto.Method, DefaultJob, parameters);
+        var metrics = new Dictionary<string, double>
+        {
+            [BenchmarkObservation.MeanNanosecondsMetric] = mean
+        };
 
-        return new BenchmarkObservation(identity, mean);
+        // Allocation is optional: absent Memory block (no MemoryDiagnoser
+        // enabled) means this metric simply isn't in the dictionary, not an
+        // error and not a zero.
+        if (dto.Memory?.BytesAllocatedPerOperation is { } bytesAllocated)
+        {
+            metrics[BenchmarkObservation.AllocatedBytesMetric] = bytesAllocated;
+        }
+
+        var measurementCount = dto.Statistics?.N ?? 0;
+        var standardDeviation = dto.Statistics?.StandardDeviation ?? 0;
+
+        var job = ExtractJob(dto.DisplayInfo);
+        var parameters = BdnParameterStringParser.Parse(dto.Parameters);
+        var identity = new BenchmarkIdentity(dto.Type, dto.Method, job, parameters);
+
+        return new BenchmarkObservation(identity, metrics, measurementCount, standardDeviation);
+    }
+
+    private static string ExtractJob(string? displayInfo)
+    {
+        if (string.IsNullOrWhiteSpace(displayInfo))
+            return DefaultJob;
+
+        var match = JobTokenPattern.Match(displayInfo);
+        return match.Success ? match.Groups["job"].Value : DefaultJob;
     }
 }

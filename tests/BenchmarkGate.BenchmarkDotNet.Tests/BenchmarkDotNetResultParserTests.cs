@@ -1,4 +1,5 @@
 using Bijecta.BenchmarkGate.BenchmarkDotNet.Parsing;
+using Bijecta.BenchmarkGate.Core.Model;
 using FluentAssertions;
 using Xunit;
 
@@ -18,8 +19,51 @@ public class BenchmarkDotNetResultParserTests
 
         var mismatchScan = observations.Single(o => o.Identity.MethodName == "MismatchScan");
         mismatchScan.Identity.TypeName.Should().Be("Recon.Benchmarks.ClassificationBenchmarks");
-        mismatchScan.MeanNanoseconds.Should().Be(4_540_000.0);
+        mismatchScan.Metrics[BenchmarkObservation.MeanNanosecondsMetric].Should().Be(4_540_000.0);
         mismatchScan.Identity.Parameters.Should().ContainKey("N").WhoseValue.Should().Be("1000000");
+    }
+
+    [Fact]
+    public void Extracts_allocation_metric_when_memory_block_is_present()
+    {
+        var observations = BenchmarkDotNetResultParser.ParseFile(FixturePath("two-benchmarks.json"));
+
+        var indexBuild = observations.Single(o => o.Identity.MethodName == "IndexBuild");
+        indexBuild.Metrics[BenchmarkObservation.AllocatedBytesMetric].Should().Be(1024);
+    }
+
+    [Fact]
+    public void Extracts_measurement_count_and_standard_deviation_for_stability()
+    {
+        var observations = BenchmarkDotNetResultParser.ParseFile(FixturePath("two-benchmarks.json"));
+
+        var mismatchScan = observations.Single(o => o.Identity.MethodName == "MismatchScan");
+        mismatchScan.MeasurementCount.Should().Be(15);
+        mismatchScan.StandardDeviationNanoseconds.Should().Be(85_000.0);
+    }
+
+    [Fact]
+    public void Extracts_job_token_from_display_info_with_no_parentheses()
+    {
+        // "MismatchScan: DefaultJob [N=1000000]" — job token has no
+        // parenthesized parameter list.
+        var observations = BenchmarkDotNetResultParser.ParseFile(FixturePath("two-benchmarks.json"));
+
+        var mismatchScan = observations.Single(o => o.Identity.MethodName == "MismatchScan");
+        mismatchScan.Identity.Job.Should().Be("DefaultJob");
+    }
+
+    [Fact]
+    public void Falls_back_to_default_job_when_display_info_is_absent()
+    {
+        // duplicate-identity.json has no DisplayInfo field at all.
+        var act = () => BenchmarkDotNetResultParser.ParseFile(FixturePath("duplicate-identity.json"));
+
+        // Both entries resolve to job "Default", which is exactly why they
+        // collide (same Type/Method/Parameters/Job) — this is what makes
+        // the duplicate-identity test fixture actually duplicate.
+        act.Should().Throw<BenchmarkResultParseException>()
+            .WithMessage("*Duplicate benchmark identity*");
     }
 
     [Fact]
@@ -53,10 +97,6 @@ public class BenchmarkDotNetResultParserTests
     {
         var directory = Path.Combine(AppContext.BaseDirectory, "Fixtures");
 
-        // The Fixtures directory intentionally also contains malformed
-        // fixtures used by other tests, so parsing the whole directory as
-        // "current results" should throw on the first malformed file it
-        // encounters — this proves ParsePath doesn't silently skip bad files.
         var act = () => BenchmarkDotNetResultParser.ParsePath(directory);
 
         act.Should().Throw<BenchmarkResultParseException>();
