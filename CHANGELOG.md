@@ -6,3 +6,7 @@ All notable changes to BenchmarkGate are documented here.
 
 ### Added
 - `Warning` and `Unstable` statuses to `BenchmarkGateStatus` (Core)
+- `GatePolicy`/`MetricPolicy`/`StabilityPolicy` records — replaces the single-threshold `RegressionPolicy`, supports per-metric direction/warning/failure thresholds plus a stability gate
+
+### Removed
+- `RegressionPolicy.cs` — superseded by `GatePolicy`
