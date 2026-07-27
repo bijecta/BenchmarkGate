@@ -20,7 +20,7 @@
     <Company>Cedar Technologies</Company>
     <Copyright>Copyright (c) Youness Aamiri</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/AamiriYouness/Cedar.BenchmarkGate</RepositoryUrl>
+    <RepositoryUrl>https://github.com/AamiriYouness/BenchmarkGate</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>

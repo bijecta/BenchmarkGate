@@ -1,4 +1,4 @@
-# Cedar.BenchmarkGate
+# BenchmarkGate
 
 > A local-first performance contract gate designed for BenchmarkDotNet and
 > repository-controlled CI workflows.
@@ -8,7 +8,7 @@ is targeted as `v0.1.0-alpha.1`.
 
 ## What this is
 
-Cedar.BenchmarkGate turns BenchmarkDotNet output into an enforceable
+BenchmarkGate turns BenchmarkDotNet output into an enforceable
 performance contract:
 
 - No SaaS account, hosted database, or network connection required to

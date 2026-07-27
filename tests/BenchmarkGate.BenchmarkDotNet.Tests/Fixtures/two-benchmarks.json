@@ -1,0 +1,62 @@
+{
+  "Title": "Recon.Benchmarks.ClassificationBenchmarks-report-full",
+  "HostEnvironmentInfo": {
+    "BenchmarkDotNetCaption": "BenchmarkDotNet",
+    "BenchmarkDotNetVersion": "0.14.0",
+    "OsVersion": "Linux",
+    "ProcessorName": "Unknown",
+    "RuntimeVersion": ".NET 10.0.0"
+  },
+  "Benchmarks": [
+    {
+      "DisplayInfo": "MismatchScan: DefaultJob [N=1000000]",
+      "Namespace": "Recon.Benchmarks",
+      "Type": "Recon.Benchmarks.ClassificationBenchmarks",
+      "Method": "MismatchScan",
+      "MethodTitle": "MismatchScan",
+      "Parameters": "N=1000000",
+      "FullName": "Recon.Benchmarks.ClassificationBenchmarks.MismatchScan(N: 1000000)",
+      "Statistics": {
+        "N": 15,
+        "Min": 4400000.0,
+        "Mean": 4540000.0,
+        "Median": 4510000.0,
+        "Max": 4700000.0,
+        "StandardDeviation": 85000.0,
+        "StandardError": 22000.0
+      },
+      "Memory": {
+        "Gen0Collections": 0,
+        "Gen1Collections": 0,
+        "Gen2Collections": 0,
+        "TotalOperations": 15,
+        "BytesAllocatedPerOperation": 0
+      }
+    },
+    {
+      "DisplayInfo": "IndexBuild: DefaultJob [N=1000000]",
+      "Namespace": "Recon.Benchmarks",
+      "Type": "Recon.Benchmarks.ClassificationBenchmarks",
+      "Method": "IndexBuild",
+      "MethodTitle": "IndexBuild",
+      "Parameters": "N=1000000",
+      "FullName": "Recon.Benchmarks.ClassificationBenchmarks.IndexBuild(N: 1000000)",
+      "Statistics": {
+        "N": 15,
+        "Min": 280000000.0,
+        "Mean": 296000000.0,
+        "Median": 294000000.0,
+        "Max": 310000000.0,
+        "StandardDeviation": 5000000.0,
+        "StandardError": 1200000.0
+      },
+      "Memory": {
+        "Gen0Collections": 12,
+        "Gen1Collections": 2,
+        "Gen2Collections": 0,
+        "TotalOperations": 15,
+        "BytesAllocatedPerOperation": 1024
+      }
+    }
+  ]
+}
