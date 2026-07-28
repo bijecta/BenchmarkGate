@@ -24,6 +24,7 @@ All notable changes to BenchmarkGate are documented here.
 - `PolicyFileTests` — coverage for missing/malformed file, schema version, stability/metric validation, direction handling, and strict unknown-property rejection.
 - `ReportWriteException` — reporters (`MarkdownReporter`/`JsonDecisionReporter`/`JunitReporter`) now wrap I/O failures (invalid path, access denied, missing directory, disk full, atomic-write failure) into this instead of letting them escape as raw stack traces
 - `ExitCodes.OutputWriteFailure = 11` — new exit code for report-write failures
+- Full v0.2 test coverage closeout: `BaselineFileTests` (schema v2 load/write, v1 rejection, multi-metric round-trip, ordering), `ConsoleReporterTests`, `MarkdownBuilderTests`, `MarkdownReporterTests`, `JsonDecisionReporterTests`, `JunitReporterTests` (renamed from a typo'd filename), and `CheckCommandTests` (end-to-end pass/regress/error paths, `--quiet`, multi-report writing, `--fail-on-warning` cross-report consistency)
 
 
 ### Changed
