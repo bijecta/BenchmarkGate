@@ -12,8 +12,8 @@
 
 ---
 
-**Status:** pre-alpha. First working release targeted as `v0.1.0-alpha.1`
-— not yet published to NuGet.
+**Status:** `v0.2.0-alpha.1`. See [ROADMAP.md](ROADMAP.md) for what's
+shipped and what's next.
 
 ## What this is
 
@@ -25,26 +25,57 @@ performance contract:
 - Baselines and policies are plain, reviewable JSON files committed to your
   repository — a performance-budget change shows up in a pull-request diff,
   same as any other code change.
+- Per-metric thresholds (mean time, allocation, ...) with separate warning
+  and failure tiers, plus a stability gate that flags noisy measurements
+  before they're evaluated as a regression.
 - Runs identically locally and in CI.
 
 ## Install
 
-Not yet published. Once `v0.1.0-alpha.1` ships:
-
 ```bash
-dotnet tool install --global Bijecta.BenchmarkGate.Tool --version 0.1.0-alpha.1
+dotnet tool install --global Bijecta.BenchmarkGate.Tool --version 0.2.0-alpha.1
 ```
 
 ## Quick start
 
 ```bash
-benchmark-gate capture --results ./BenchmarkDotNet.Artifacts/results --output ./benchmarks/baseline.json
-benchmark-gate check --results ./BenchmarkDotNet.Artifacts/results --baseline ./benchmarks/baseline.json --threshold-percent 10
+benchmark-gate capture --results ./BenchmarkDotNet.Artifacts/results --output ./benchmarks/baseline.json --suite my-suite
+benchmark-gate check --results ./BenchmarkDotNet.Artifacts/results --baseline ./benchmarks/baseline.json --policy ./benchmarks/policy.json
 ```
 
 `check` reads BenchmarkDotNet's full-JSON output, compares it against the
-committed baseline, and exits non-zero the moment a benchmark regresses past
-the threshold — a gate your performance numbers have to pass before merge.
+committed baseline under the rules in `policy.json`, and exits non-zero the
+moment a benchmark regresses past the failure threshold — a gate your
+performance numbers have to pass before merge.
+
+`policy.json` defines a stability gate and per-metric thresholds:
+
+```json
+{
+  "schemaVersion": 1,
+  "stability": { "minimumMeasurements": 10, "maximumCoefficientOfVariation": 0.05 },
+  "metrics": {
+    "meanNanoseconds": { "direction": "lower-is-better", "warningPercent": 7.5, "failurePercent": 15, "minimumAbsoluteChange": 100 },
+    "allocatedBytesPerOperation": { "direction": "lower-is-better", "warningPercent": 1, "failurePercent": 5, "minimumAbsoluteChange": 1024 }
+  }
+}
+```
+
+A benchmark whose measurements don't meet the stability bar is reported as
+`Unstable` rather than evaluated as a pass or regression. A metric crossing
+`warningPercent` but not `failurePercent` is reported as `Warning` — visible
+in every report, and only affects the process exit code if you pass
+`--fail-on-warning`.
+
+Useful flags on `check`:
+
+| Flag | Purpose |
+|---|---|
+| `--markdown <path>` | Write a GitHub-friendly Markdown summary |
+| `--json <path>` | Write a machine-readable decision document |
+| `--junit <path>` | Write a JUnit XML report for CI test-result UIs |
+| `--fail-on-warning` | Make a Warning-only suite exit non-zero |
+| `--quiet` | Suppress console output (reports/exit code still work) |
 
 ## What this is not
 
@@ -52,8 +83,7 @@ the threshold — a gate your performance numbers have to pass before merge.
   measurement engine; this tool only evaluates its output.
 - Not a hosted dashboard or continuous-benchmarking platform. If you want
   historical trend storage and a web UI out of the box, look at established
-  hosted platforms instead (comparison coming once the alternatives section
-  is written — see the roadmap).
+  hosted platforms instead.
 
 ## Why
 
@@ -64,27 +94,7 @@ that might get read.
 
 ## Status / roadmap
 
-Currently building the `v0.1.0-alpha.1` vertical slice:
-
-- [x] Repository skeleton, central package management, ADR-0001
-- [x] BenchmarkDotNet JSON parsing (full-JSON exporter, single job per v0.1 — see parser XML docs)
-- [x] Stable benchmark identity
-- [x] Mean-time comparison against a committed baseline
-- [x] `check` / `capture` commands
-- [x] Console, Markdown, and JSON decision reports
-- [x] Documented exit codes (subset used by v0.1; full table in `Core.Evaluation.ExitCodes`)
-- [x] Packaged as a .NET tool, dogfooded against real CedarRecon benchmark
-      results (deliberate regression correctly detected and cleared)
-- [ ] Published to NuGet.org
-
-**Known v0.1 simplifications** (documented inline in code, revisit for v0.2):
-- Every parsed benchmark is assigned a fixed `"Default"` job — no multi-job
-  disambiguation yet.
-- `check` takes `--threshold-percent` / `--minimum-absolute-change-ns`
-  directly rather than a full `policy.json` (the master-spec policy schema).
-- Baseline schema is reduced (no provenance/environment blocks yet).
-
-See `docs/adr/` for architecture decisions as they're made.
+See [ROADMAP.md](ROADMAP.md).
 
 ## License
 

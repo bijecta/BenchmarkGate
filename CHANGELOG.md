@@ -2,54 +2,39 @@
 
 All notable changes to BenchmarkGate are documented here.
 
-## [Unreleased] — v0.2.0
+## [0.2.0-alpha.1]
 
 ### Added
-- `Warning` and `Unstable` statuses to `BenchmarkGateStatus` (Core)
-- `GatePolicy`/`MetricPolicy`/`StabilityPolicy` records — replaces the single-threshold `RegressionPolicy`, supports per-metric direction/warning/failure thresholds plus a stability gate
-- `MetricDecision` record — per-metric outcome (name, status, baseline/current/delta values, explanation)
-- `ExitCodes.Warning = 9` — new exit code for suites with only Warning-status benchmarks when `--fail-on-warning` is set
-- `IMetricFormatter` / `MetricFormatters` — per-metric-name unit formatting (nanoseconds for `meanNanoseconds`, bytes for `allocatedBytesPerOperation`, unitless fallback for unregistered metrics). Replaces the nanosecond-only `FormatNanoseconds`, which mislabeled allocation values with time-unit suffixes.
-- `MetricFormatterTests` — boundary-value coverage for unit-switch thresholds (999/1000 ns, 1023/1024 bytes) and registry fallback behavior
-- `BdnStatisticsDto.N` / `StandardDeviation` — measurement count and stddev for the stability gate
-- `BdnMemoryDto` (`BytesAllocatedPerOperation`) and `BdnBenchmarkDto.Memory` — allocation metric support (unverified against real BenchmarkDotNet output, needs confirmation before parser wiring)
-- `BdnJobDto` (`ResolvedId`) and `BdnBenchmarkDto.Job` — multi-job identity support, replacing the hardcoded "Default" placeholder (unverified field shape, parser must retain the "Default" fallback)
-- `BdnStatisticsDto.N` / `StandardDeviation` — measurement count and stddev for the stability gate (confirmed against real BenchmarkDotNet output)
-- `BdnMemoryDto` (`BytesAllocatedPerOperation`) and `BdnBenchmarkDto.Memory` — allocation metric support (confirmed against real output)
-- `BdnBenchmarkDto.DisplayInfo` — raw display string containing the job identifier (e.g. `Job-SNYTAA(...)`), for multi-job identity extraction; there is no structured `Job` field in BenchmarkDotNet's JSON export
-- `job-with-parentheses.json` test fixture and coverage — confirms the `DisplayInfo` job-token regex handles both observed shapes (bare token like `DefaultJob`, and parenthesized like `Job-SNYTAA(IterationCount=10, ...)`)
-- Baseline file schema bumped `schemaVersion` 1 → 2 (breaking, no migration): `benchmarks[].meanNanoseconds` replaced with `benchmarks[].metrics` (object keyed by metric name). v0.1 baseline files are rejected outright with a message directing the user to re-run `capture`.
-- `JunitReporter` — JUnit XML report writer, one `<testcase>` per (benchmark, metric) pair. Regressed/Missing/Unstable always render as `<failure>`; Warning only renders as `<failure>` when `--fail-on-warning` is set, so the JUnit pass/fail signal matches the process exit code instead of contradicting it. Covered by `JunitReporterTests`.
-- `PolicyFile.Load(path)` — deserializes `policy.json` into a `GatePolicy`, replacing the `--threshold-percent`/`--minimum-absolute-change-ns` CLI flags. Schema-versioned (`schemaVersion: 1`), stream-based JSON read, typed `PolicyFileException` on malformed input. Validates numeric ranges (`minimumMeasurements > 0`; finite, non-negative `maximumCoefficientOfVariation`/`warningPercent`/`failurePercent`/`minimumAbsoluteChange`; non-empty metric names) and rejects a metric whose `warningPercent >= failurePercent`, since that would make `Warning` unreachable for that metric. Uses `JsonUnmappedMemberHandling.Disallow` (.NET 8+) so a typo'd property name fails loudly instead of being silently ignored. `direction` is strictly case-sensitive by design.
-- `PolicyFileTests` — coverage for missing/malformed file, schema version, stability/metric validation, direction handling, and strict unknown-property rejection.
-- `ReportWriteException` — reporters (`MarkdownReporter`/`JsonDecisionReporter`/`JunitReporter`) now wrap I/O failures (invalid path, access denied, missing directory, disk full, atomic-write failure) into this instead of letting them escape as raw stack traces
-- `ExitCodes.OutputWriteFailure = 11` — new exit code for report-write failures
-- Full v0.2 test coverage closeout: `BaselineFileTests` (schema v2 load/write, v1 rejection, multi-metric round-trip, ordering), `ConsoleReporterTests`, `MarkdownBuilderTests`, `MarkdownReporterTests`, `JsonDecisionReporterTests`, `JunitReporterTests` (renamed from a typo'd filename), and `CheckCommandTests` (end-to-end pass/regress/error paths, `--quiet`, multi-report writing, `--fail-on-warning` cross-report consistency)
-- `BaselineWriteException` — write failures (including overwrite-false conflicts) from `BaselineFile.WriteCandidate` are now wrapped in this instead of escaping as raw `IOException`/`UnauthorizedAccessException`
-- `AtomicFileWriter.Write`/`WriteJson` gained an `overwrite` parameter (default `true`, so existing callers are unaffected)
-- `CaptureCommandTests`, additional `AtomicFileWriterTests` for the `overwrite: false` enforcement path
-
+- `policy.json` file format (`PolicyFile.Load`) — per-metric `direction`/`warningPercent`/`failurePercent`/`minimumAbsoluteChange`, plus a `stability` block (`minimumMeasurements`, `maximumCoefficientOfVariation`). Schema-versioned, strict unknown-property rejection (`JsonUnmappedMemberHandling.Disallow`, .NET 8+), full numeric-range validation (rejects non-finite/negative values, empty metric names, `warningPercent >= failurePercent`)
+- `Warning` and `Unstable` statuses (`BenchmarkGateStatus`), between `Passed`/`Regressed` and as a stability-gate outcome respectively
+- `GatePolicy`/`MetricPolicy`/`StabilityPolicy` — replaces the single-threshold `RegressionPolicy`
+- `MetricDecision` — per-metric outcome (name, status, baseline/current/delta, explanation); `BenchmarkDecision.Status` is now a worst-wins aggregate across a benchmark's metrics
+- `IMetricFormatter`/`MetricFormatters` — per-metric-name unit formatting (nanoseconds, bytes, unitless fallback), replacing a nanosecond-only formatter that mislabeled allocation values
+- Allocation/memory metric support end-to-end: `BdnMemoryDto`/`Statistics.N`/`StandardDeviation` (confirmed against real BenchmarkDotNet output), `BenchmarkObservation.Metrics` dictionary, `BaselineEntry.Metrics`
+- Multi-job identity — extracted from BenchmarkDotNet's `DisplayInfo` field via regex (no structured `Job` field exists in BDN's JSON export; confirmed against real fixtures, both bare-token and parenthesized-parameter shapes), falling back to `"Default"`
+- `JunitReporter` — JUnit XML report (`--junit`), one `<testcase>` per (benchmark, metric) pair; `Warning` only renders as `<failure>` when `--fail-on-warning` is set, keeping the report consistent with the process exit code
+- `ReportWriteException` — `MarkdownReporter`/`JsonDecisionReporter`/`JunitReporter` wrap I/O failures instead of letting them escape as raw stack traces; new `ExitCodes.OutputWriteFailure`
+- `BaselineWriteException` — `BaselineFile.WriteCandidate` write failures (including overwrite-false conflicts) are wrapped instead of escaping raw
+- `AtomicFileWriter.Write`/`WriteJson` gained an `overwrite` parameter (default `true`), enforced atomically via `File.Move(..., overwrite)` — closes a time-of-check/time-of-use race in `capture --overwrite` handling
+- `CaptureCommand` validation: empty/whitespace suite names and zero-observation results are now rejected instead of silently producing a meaningless or empty baseline
+- `ROADMAP.md`, split out of the README
+- Test coverage: `PolicyFileTests`, `BaselineFileTests`, `MetricFormatterTests`, `JunitReporterTests`, `ConsoleReporterTests`, `MarkdownReporterTests`, `MarkdownBuilderTests`, `JsonDecisionReporterTests`, `CheckCommandTests`, `CaptureCommandTests`, plus `AtomicFileWriterTests` coverage for the new `overwrite: false` path
 
 ### Changed
-- `BenchmarkObservation` — single `MeanNanoseconds` field replaced with a `Metrics` dictionary; added `MeasurementCount` and `StandardDeviationNanoseconds` for stability evaluation
-- `BaselineEntry.MeanNanoseconds` (double) replaced with `BaselineEntry.Metrics` (`IReadOnlyDictionary<string, double>`), same keys as `BenchmarkObservation.Metrics`. `BenchmarkBaseline` itself (Suite, dedup-by-identity, TryFind) is unchanged.
-- `BenchmarkDecision` — flat single-metric fields replaced with `Metrics: IReadOnlyList<MetricDecision>`; `Status` is now a worst-wins aggregate across metrics
-- `SuiteDecision.ExitCode` (property) replaced with `GetExitCode(bool failOnWarning)` (method), since exit code now depends on the `--fail-on-warning` flag
-- `SuiteDecision` gained `WarningCount`/`UnstableCount`
-- `RegressionEvaluatorTests` rewritten for `GatePolicy`/multi-metric shapes; added coverage for the stability gate and `--fail-on-warning` exit-code behavior
-- `BenchmarkDotNetResultParser` — builds a `Metrics` dictionary (mean always, allocation when a `Memory` block is present) instead of a single `MeanNanoseconds` value; populates `MeasurementCount`/`StandardDeviationNanoseconds` from `Statistics.N`/`StandardDeviation`; extracts job identity from the free-text `DisplayInfo` field via regex (no structured `Job` field exists in BenchmarkDotNet's export), falling back to `"Default"` when absent or unrecognized
-- `MarkdownBuilder.FormatNanoseconds` removed — reporters now call `Core.Evaluation.MetricFormatters.For(metricName).Format(value)` directly, since Tool already depends on Core (ADR-0001) and duplicating per-metric-unit formatting a second time wasn't a real tradeoff
-- `MarkdownReporter`/`ConsoleReporter` — one row per (benchmark, metric) pair instead of a single mean-time row; suite summary gains Warning/Unstable counts
-- `JsonDecisionReporter` — schema bumped 1 → 2: flat baseline/current/delta fields replaced with a nested `metrics` array per benchmark; `Write` now takes a `failOnWarning` flag since `SuiteDecision.ExitCode` is a method
-- CLI `check` command: `--threshold-percent`/`--minimum-absolute-change-ns` replaced with `--policy <path>` (loads a `policy.json` via `PolicyFile`); added `--junit <path>` and `--fail-on-warning`
-- `CheckCommand.Run` — report-file writes wrapped in a single `try/catch (ReportWriteException)` producing a stable stderr message and exit code; `baselineDoc` renamed to `baseline`; namespace-qualified type usages replaced with `using` directives
+- CLI `check`: `--threshold-percent`/`--minimum-absolute-change-ns` replaced with `--policy <path>`; added `--junit <path>` and `--fail-on-warning`
+- `SuiteDecision.ExitCode` (property) → `GetExitCode(failOnWarning)` (method)
+- `RegressionEvaluator` rewritten: a stability check (measurement count, coefficient of variation) gates a benchmark to `Unstable` before any metric is compared; otherwise loops `GatePolicy.Metrics`, skipping metrics absent from either side, then aggregates worst-wins
+- `BenchmarkObservation`/`BaselineEntry` — single `MeanNanoseconds`/`meanNanoseconds` field replaced with a `Metrics: IReadOnlyDictionary<string, double>` dictionary
+- Baseline file `schemaVersion` bumped 1 → 2 (breaking, no migration): `benchmarks[].meanNanoseconds` → `benchmarks[].metrics`. Old baseline files are rejected outright with a message pointing at `capture`
+- `JsonDecisionReporter` schema bumped 1 → 2: flat baseline/current/delta fields replaced with a per-benchmark `metrics` array; `Write` now takes `failOnWarning`
+- `ConsoleReporter`/`MarkdownReporter` — one row per (benchmark, metric) pair instead of a single mean-time row; suite summaries gained Warning/Unstable counts
+- `MarkdownBuilder.FormatNanoseconds` removed — reporters call `Core.Evaluation.MetricFormatters` directly instead of duplicating unit-formatting logic
+- README rewritten for the v0.2 CLI surface (`--policy` example, flags table); roadmap moved to `ROADMAP.md`
 
+### Fixed
+- `RegressionPolicy`/`BenchmarkGateStatus` — the v0.1→v0.2 Core rewrite (which an earlier handoff described as already done) had not actually landed on the branch; this release is the real implementation
+- `capture --overwrite` time-of-check/time-of-use race (see `AtomicFileWriter` above)
 
 ### Removed
 - `RegressionPolicy.cs` — superseded by `GatePolicy`
-
-
-### Fixed
-- `CaptureCommand`/`BaselineFile.WriteCandidate` overwrite check had a time-of-check/time-of-use race: `File.Exists` followed by an unconditional write left a window for a concurrent process to create the file in between. Fixed by threading `overwrite` down to `AtomicFileWriter.Commit`, which now enforces it via `File.Move(..., overwrite)` — an atomic OS-level check, not a preceding probe.
-- `CaptureCommand` — empty/whitespace suite names are now rejected (`ExitCodes.InvalidArguments`) instead of silently captured
-- `CaptureCommand` — a results file with zero observations is now rejected instead of producing an empty baseline candidate that would later make every real baseline entry look `Missing`
+- `--threshold-percent`/`--minimum-absolute-change-ns` CLI flags — no deprecation shim
