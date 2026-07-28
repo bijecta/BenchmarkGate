@@ -118,6 +118,40 @@ public sealed class AtomicFileWriterTests : IDisposable
         File.ReadAllText(target).Should().Be("original content");
     }
 
+    [Fact]
+    public void Write_WithOverwriteFalse_ThrowsWhenDestinationAlreadyExists()
+    {
+        var target = PathIn("report.md");
+        File.WriteAllText(target, "original content");
+
+        var act = () => AtomicFileWriter.Write(target, "new content", overwrite: false);
+
+        act.Should().Throw<IOException>();
+        File.ReadAllText(target).Should().Be("original content");
+    }
+
+    [Fact]
+    public void Write_WithOverwriteFalse_SucceedsWhenDestinationDoesNotExist()
+    {
+        var target = PathIn("report.md");
+
+        AtomicFileWriter.Write(target, "content", overwrite: false);
+
+        File.ReadAllText(target).Should().Be("content");
+    }
+
+    [Fact]
+    public void WriteJson_WithOverwriteFalse_ThrowsWhenDestinationAlreadyExists()
+    {
+        var target = PathIn("decision.json");
+        File.WriteAllText(target, "original content");
+
+        var act = () => AtomicFileWriter.WriteJson(target, new { Value = 1 }, overwrite: false);
+
+        act.Should().Throw<IOException>();
+        File.ReadAllText(target).Should().Be("original content");
+    }
+
     private sealed record NullableSample(string? Value);
 
     private sealed record ThrowingSample;

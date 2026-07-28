@@ -4,11 +4,9 @@ using Bijecta.BenchmarkGate.Core.Evaluation;
 namespace Bijecta.BenchmarkGate.Tool.Reporting;
 
 /// <summary>
-/// Renders a <see cref="SuiteDecision"/> as a compact console table, in the
-/// style of master spec section 13. Reporting only consumes the evaluation
-/// result — it never re-evaluates anything. Shares number formatting with
-/// <see cref="MarkdownReporter"/> via <see cref="MarkdownBuilder"/>'s static
-/// helpers so the two reports never drift apart on unit thresholds.
+/// Renders a <see cref="SuiteDecision"/> as a compact console table. One
+/// printed row per (benchmark, metric) pair. Reporting only consumes the
+/// evaluation result — it never re-evaluates anything.
 /// </summary>
 public static class ConsoleReporter
 {
@@ -25,20 +23,37 @@ public static class ConsoleReporter
         }
 
         const int nameWidth = 46;
+        const int metricWidth = 24;
         const int valueWidth = 12;
 
         output.WriteLine(
-            $"{"Benchmark".PadRight(nameWidth)} {"Baseline".PadRight(valueWidth)} {"Current".PadRight(valueWidth)} {"Delta".PadRight(10)} Status");
+            $"{"Benchmark".PadRight(nameWidth)} {"Metric".PadRight(metricWidth)} {"Baseline".PadRight(valueWidth)} {"Current".PadRight(valueWidth)} {"Delta".PadRight(10)} Status");
 
-        foreach (var row in rows)
+        foreach (var benchmark in rows)
         {
-            var name = Truncate(row.Identity.CanonicalString, nameWidth);
-            var baselineText = MarkdownBuilder.FormatNanoseconds(row.BaselineMeanNanoseconds);
-            var currentText = MarkdownBuilder.FormatNanoseconds(row.CurrentMeanNanoseconds);
-            var deltaText = MarkdownBuilder.FormatDeltaPercent(row.RelativeDeltaPercent);
+            var name = Truncate(benchmark.Identity.CanonicalString, nameWidth);
 
-            output.WriteLine(
-                $"{name.PadRight(nameWidth)} {baselineText.PadRight(valueWidth)} {currentText.PadRight(valueWidth)} {deltaText.PadRight(10)} {row.Status.ToString().ToUpperInvariant()}");
+            if (benchmark.Metrics.Count == 0)
+            {
+                output.WriteLine(
+                    $"{name.PadRight(nameWidth)} {"-".PadRight(metricWidth)} {"-".PadRight(valueWidth)} {"-".PadRight(valueWidth)} {"-".PadRight(10)} {benchmark.Status.ToString().ToUpperInvariant()}");
+                continue;
+            }
+
+            foreach (var metric in benchmark.Metrics)
+            {
+                var formatter = MetricFormatters.For(metric.MetricName);
+                var baselineText = formatter.Format(metric.BaselineValue);
+                var currentText = formatter.Format(metric.CurrentValue);
+                var deltaText = MarkdownBuilder.FormatDeltaPercent(metric.RelativeDeltaPercent);
+
+                output.WriteLine(
+                    $"{name.PadRight(nameWidth)} {metric.MetricName.PadRight(metricWidth)} {baselineText.PadRight(valueWidth)} {currentText.PadRight(valueWidth)} {deltaText.PadRight(10)} {metric.Status.ToString().ToUpperInvariant()}");
+
+                // Only print the benchmark name on the first metric row to
+                // avoid visual repetition on multi-metric benchmarks.
+                name = "";
+            }
         }
 
         output.WriteLine();
@@ -46,16 +61,21 @@ public static class ConsoleReporter
             $"Total: {decision.Benchmarks.Count}  " +
             $"Improved: {decision.ImprovedCount}  " +
             $"Passed: {decision.PassedCount}  " +
+            $"Warning: {decision.WarningCount}  " +
             $"Regressed: {decision.RegressedCount}  " +
             $"Missing: {decision.MissingCount}  " +
-            $"New: {decision.NewCount}"));
+            $"New: {decision.NewCount}  " +
+            $"Unstable: {decision.UnstableCount}"));
 
-        if (decision.RegressedCount > 0 || decision.MissingCount > 0)
+        var failures = rows.Where(r =>
+            r.Status is BenchmarkGateStatus.Regressed or BenchmarkGateStatus.Missing
+                or BenchmarkGateStatus.Unstable or BenchmarkGateStatus.Warning).ToList();
+
+        if (failures.Count > 0)
         {
             output.WriteLine();
             output.WriteLine("Details:");
-            foreach (var row in rows.Where(r =>
-                         r.Status is BenchmarkGateStatus.Regressed or BenchmarkGateStatus.Missing))
+            foreach (var row in failures)
             {
                 output.WriteLine($"  [{row.Status}] {row.Identity.CanonicalString}: {row.Explanation}");
             }

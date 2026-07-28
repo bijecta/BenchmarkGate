@@ -3,11 +3,19 @@ using Bijecta.BenchmarkGate.Core.Identity;
 namespace Bijecta.BenchmarkGate.Core.Model;
 
 /// <summary>
-/// A single benchmark's measured result, normalized away from whatever
-/// tool produced it. For v0.1.0-alpha.1 this only carries the mean timing
-/// in nanoseconds — allocation, stability, and environment fields are
-/// deferred to v0.2 per the roadmap.
+/// A single benchmark's observed results from a run. Metrics is extensible —
+/// new metric names can be added (by the adapter layer) without further
+/// schema changes here or in GatePolicy/BenchmarkBaseline.
 /// </summary>
 public sealed record BenchmarkObservation(
     BenchmarkIdentity Identity,
-    double MeanNanoseconds);
+    IReadOnlyDictionary<string, double> Metrics,
+    int MeasurementCount,
+    double StandardDeviationNanoseconds)
+{
+    /// <summary>Key into Metrics for BenchmarkDotNet's reported mean time.</summary>
+    public const string MeanNanosecondsMetric = "meanNanoseconds";
+
+    /// <summary>Key into Metrics for BenchmarkDotNet's memory diagnoser output.</summary>
+    public const string AllocatedBytesMetric = "allocatedBytesPerOperation";
+}

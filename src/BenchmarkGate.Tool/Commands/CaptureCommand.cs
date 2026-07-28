@@ -1,12 +1,12 @@
-using System.Globalization;
 using Bijecta.BenchmarkGate.BenchmarkDotNet.Parsing;
 using Bijecta.BenchmarkGate.Core.Evaluation;
+using Bijecta.BenchmarkGate.Core.Model;
 using Bijecta.BenchmarkGate.Tool.Baseline;
 
 namespace Bijecta.BenchmarkGate.Tool.Commands;
 
 /// <summary>
-/// Implements `benchmark-gate capture`. Argument acquisition lives in
+/// Implements <c>benchmark-gate capture</c>. Argument acquisition lives in
 /// Program.cs (System.CommandLine, per ADR-0002).
 /// </summary>
 internal static class CaptureCommand
@@ -19,6 +19,17 @@ internal static class CaptureCommand
         TextWriter stdout,
         TextWriter stderr)
     {
+        if (string.IsNullOrWhiteSpace(suite))
+        {
+            stderr.WriteLine("Suite name must not be empty.");
+            return ExitCodes.InvalidArguments;
+        }
+
+        suite = suite.Trim();
+
+        // Friendly early check only — the real enforcement against a
+        // time-of-check/time-of-use race lives in BaselineFile.WriteCandidate
+        // (via AtomicFileWriter's File.Move overwrite: false).
         if (File.Exists(outputPath) && !overwrite)
         {
             stderr.WriteLine(
@@ -27,7 +38,7 @@ internal static class CaptureCommand
             return ExitCodes.InvalidArguments;
         }
 
-        Core.Model.BenchmarkObservation[] observations;
+        BenchmarkObservation[] observations;
         try
         {
             observations = BenchmarkDotNetResultParser.ParsePath(resultsPath).ToArray();
@@ -38,9 +49,23 @@ internal static class CaptureCommand
             return ExitCodes.UnsupportedSchema;
         }
 
-        BaselineFile.WriteCandidate(outputPath, suite, observations);
-        stdout.WriteLine(string.Create(CultureInfo.InvariantCulture,
-            $"Wrote baseline candidate with {observations.Length} benchmark(s) to '{outputPath}'."));
+        if (observations.Length == 0)
+        {
+            stderr.WriteLine("No benchmark observations were found. Refusing to create an empty baseline candidate.");
+            return ExitCodes.UnsupportedSchema;
+        }
+
+        try
+        {
+            BaselineFile.WriteCandidate(outputPath, suite, observations, overwrite);
+        }
+        catch (BaselineWriteException ex)
+        {
+            stderr.WriteLine($"Failed to write baseline candidate: {ex.Message}");
+            return ExitCodes.OutputWriteFailure;
+        }
+
+        stdout.WriteLine($"Wrote baseline candidate with {observations.Length} benchmark(s) to '{outputPath}'.");
         stdout.WriteLine("This is a candidate — review it like a normal source change before committing it as the approved baseline.");
 
         return ExitCodes.Passed;
