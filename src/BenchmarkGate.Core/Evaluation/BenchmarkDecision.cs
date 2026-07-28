@@ -84,4 +84,5 @@ public static class ExitCodes
     public const int UnsupportedSchema = 8;
     public const int Warning = 9;
     public const int InternalError = 10;
+    public const int OutputWriteFailure = 11;
 }

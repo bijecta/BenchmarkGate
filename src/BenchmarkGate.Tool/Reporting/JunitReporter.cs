@@ -111,7 +111,14 @@ public static class JunitReporter
             document.WriteTo(xmlWriter);
         }
 
-        AtomicFileWriter.Write(path, stringWriter.ToString());
+        try
+        {
+            AtomicFileWriter.Write(path, stringWriter.ToString());
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new ReportWriteException(path, "Failed to write JUnit XML report.", ex);
+        }
     }
 
     /// <summary>

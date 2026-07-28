@@ -22,6 +22,8 @@ All notable changes to BenchmarkGate are documented here.
 - `JunitReporter` — JUnit XML report writer, one `<testcase>` per (benchmark, metric) pair. Regressed/Missing/Unstable always render as `<failure>`; Warning only renders as `<failure>` when `--fail-on-warning` is set, so the JUnit pass/fail signal matches the process exit code instead of contradicting it. Covered by `JunitReporterTests`.
 - `PolicyFile.Load(path)` — deserializes `policy.json` into a `GatePolicy`, replacing the `--threshold-percent`/`--minimum-absolute-change-ns` CLI flags. Schema-versioned (`schemaVersion: 1`), stream-based JSON read, typed `PolicyFileException` on malformed input. Validates numeric ranges (`minimumMeasurements > 0`; finite, non-negative `maximumCoefficientOfVariation`/`warningPercent`/`failurePercent`/`minimumAbsoluteChange`; non-empty metric names) and rejects a metric whose `warningPercent >= failurePercent`, since that would make `Warning` unreachable for that metric. Uses `JsonUnmappedMemberHandling.Disallow` (.NET 8+) so a typo'd property name fails loudly instead of being silently ignored. `direction` is strictly case-sensitive by design.
 - `PolicyFileTests` — coverage for missing/malformed file, schema version, stability/metric validation, direction handling, and strict unknown-property rejection.
+- `ReportWriteException` — reporters (`MarkdownReporter`/`JsonDecisionReporter`/`JunitReporter`) now wrap I/O failures (invalid path, access denied, missing directory, disk full, atomic-write failure) into this instead of letting them escape as raw stack traces
+- `ExitCodes.OutputWriteFailure = 11` — new exit code for report-write failures
 
 
 ### Changed
@@ -35,6 +37,8 @@ All notable changes to BenchmarkGate are documented here.
 - `MarkdownBuilder.FormatNanoseconds` removed — reporters now call `Core.Evaluation.MetricFormatters.For(metricName).Format(value)` directly, since Tool already depends on Core (ADR-0001) and duplicating per-metric-unit formatting a second time wasn't a real tradeoff
 - `MarkdownReporter`/`ConsoleReporter` — one row per (benchmark, metric) pair instead of a single mean-time row; suite summary gains Warning/Unstable counts
 - `JsonDecisionReporter` — schema bumped 1 → 2: flat baseline/current/delta fields replaced with a nested `metrics` array per benchmark; `Write` now takes a `failOnWarning` flag since `SuiteDecision.ExitCode` is a method
+- CLI `check` command: `--threshold-percent`/`--minimum-absolute-change-ns` replaced with `--policy <path>` (loads a `policy.json` via `PolicyFile`); added `--junit <path>` and `--fail-on-warning`
+- `CheckCommand.Run` — report-file writes wrapped in a single `try/catch (ReportWriteException)` producing a stable stderr message and exit code; `baselineDoc` renamed to `baseline`; namespace-qualified type usages replaced with `using` directives
 
 
 ### Removed

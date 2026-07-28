@@ -9,24 +9,26 @@ using Bijecta.BenchmarkGate.Tool.Commands;
 
 var resultsOption = new Option<string>("--results") { Required = true };
 var baselineOption = new Option<string>("--baseline") { Required = true };
-var thresholdOption = new Option<double>("--threshold-percent") { DefaultValueFactory = _ => 10.0 };
-var minAbsChangeOption = new Option<double>("--minimum-absolute-change-ns") { DefaultValueFactory = _ => 0.0 };
+var policyOption = new Option<string>("--policy") { Required = true };
 var markdownOption = new Option<string?>("--markdown");
 var jsonOption = new Option<string?>("--json");
+var junitOption = new Option<string?>("--junit");
+var failOnWarningOption = new Option<bool>("--fail-on-warning");
 var quietOption = new Option<bool>("--quiet");
 
 var checkCommand = new Command("check", "Evaluate BenchmarkDotNet results against an approved baseline.")
 {
-    resultsOption, baselineOption, thresholdOption, minAbsChangeOption, markdownOption, jsonOption, quietOption,
+    resultsOption, baselineOption, policyOption, markdownOption, jsonOption, junitOption, failOnWarningOption, quietOption,
 };
 
 checkCommand.SetAction(parseResult => CheckCommand.Run(
     parseResult.GetValue(resultsOption)!,
     parseResult.GetValue(baselineOption)!,
-    parseResult.GetValue(thresholdOption),
-    parseResult.GetValue(minAbsChangeOption),
+    parseResult.GetValue(policyOption)!,
     parseResult.GetValue(markdownOption),
     parseResult.GetValue(jsonOption),
+    parseResult.GetValue(junitOption),
+    parseResult.GetValue(failOnWarningOption),
     parseResult.GetValue(quietOption),
     Console.Out,
     Console.Error));

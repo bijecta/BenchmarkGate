@@ -52,7 +52,14 @@ public static class MarkdownReporter
             }
         }
 
-        AtomicFileWriter.Write(path, md.ToString());
+        try
+        {
+            AtomicFileWriter.Write(path, md.ToString());
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new ReportWriteException(path, "Failed to write Markdown report.", ex);
+        }
     }
 
     private static IEnumerable<IReadOnlyList<string>> BuildRows(BenchmarkDecision benchmark)

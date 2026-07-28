@@ -56,7 +56,14 @@ public static class JsonDecisionReporter
                 .ToList(),
         };
 
-        AtomicFileWriter.WriteJson(path, dto, SerializerOptions);
+        try
+        {
+            AtomicFileWriter.WriteJson(path, dto, SerializerOptions);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new ReportWriteException(path, "Failed to write JSON decision report.", ex);
+        }
     }
 
     private sealed class DecisionDocumentDto
