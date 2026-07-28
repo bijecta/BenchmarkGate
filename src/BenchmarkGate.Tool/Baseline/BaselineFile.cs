@@ -28,6 +28,24 @@ public sealed class BaselineFileException : Exception
 }
 
 /// <summary>
+/// Thrown when a baseline file cannot be written (invalid path, access
+/// denied, missing directory, disk full, atomic-write failure, or the
+/// destination already exists and overwrite was not requested). Kept
+/// separate from <see cref="BaselineFileException"/>, which represents
+/// load/parse failures, not write failures.
+/// </summary>
+public sealed class BaselineWriteException : Exception
+{
+    public string OutputPath { get; }
+
+    public BaselineWriteException(string outputPath, string message, Exception innerException)
+        : base($"{message} (output file: '{outputPath}')", innerException)
+    {
+        OutputPath = outputPath;
+    }
+}
+
+/// <summary>
 /// Reads and writes the baseline JSON file format.
 /// </summary>
 /// <remarks>
@@ -115,7 +133,17 @@ public static class BaselineFile
     /// `capture` command). Output is deterministically ordered by canonical
     /// identity so the file diffs cleanly in source control.
     /// </summary>
-    public static void WriteCandidate(string path, string suite, IReadOnlyList<BenchmarkObservation> observations)
+    /// <param name="path">Destination file path.</param>
+    /// <param name="suite">Suite name recorded in the baseline document.</param>
+    /// <param name="observations">Observations to capture as baseline entries.</param>
+    /// <param name="overwrite">
+    /// When false, fails if <paramref name="path"/> already exists. This is
+    /// enforced atomically inside AtomicFileWriter's commit (File.Move with
+    /// overwrite: false) — not by a preceding File.Exists check — so there
+    /// is no time-of-check/time-of-use race with another process.
+    /// </param>
+    public static void WriteCandidate(
+        string path, string suite, IReadOnlyList<BenchmarkObservation> observations, bool overwrite = true)
     {
         var dto = new BaselineDocumentDto
         {
@@ -139,7 +167,21 @@ public static class BaselineFile
                 .ToList(),
         };
 
-        AtomicFileWriter.WriteJson(path, dto, SerializerOptions);
+        try
+        {
+            AtomicFileWriter.WriteJson(path, dto, SerializerOptions, overwrite);
+        }
+        catch (IOException ex) when (!overwrite && File.Exists(path))
+        {
+            throw new BaselineWriteException(
+                path,
+                "Destination already exists. Re-run with --overwrite if you intend to replace it.",
+                ex);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new BaselineWriteException(path, "Failed to write baseline candidate.", ex);
+        }
     }
 
     private sealed class BaselineDocumentDto

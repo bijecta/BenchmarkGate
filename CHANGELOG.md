@@ -25,6 +25,9 @@ All notable changes to BenchmarkGate are documented here.
 - `ReportWriteException` — reporters (`MarkdownReporter`/`JsonDecisionReporter`/`JunitReporter`) now wrap I/O failures (invalid path, access denied, missing directory, disk full, atomic-write failure) into this instead of letting them escape as raw stack traces
 - `ExitCodes.OutputWriteFailure = 11` — new exit code for report-write failures
 - Full v0.2 test coverage closeout: `BaselineFileTests` (schema v2 load/write, v1 rejection, multi-metric round-trip, ordering), `ConsoleReporterTests`, `MarkdownBuilderTests`, `MarkdownReporterTests`, `JsonDecisionReporterTests`, `JunitReporterTests` (renamed from a typo'd filename), and `CheckCommandTests` (end-to-end pass/regress/error paths, `--quiet`, multi-report writing, `--fail-on-warning` cross-report consistency)
+- `BaselineWriteException` — write failures (including overwrite-false conflicts) from `BaselineFile.WriteCandidate` are now wrapped in this instead of escaping as raw `IOException`/`UnauthorizedAccessException`
+- `AtomicFileWriter.Write`/`WriteJson` gained an `overwrite` parameter (default `true`, so existing callers are unaffected)
+- `CaptureCommandTests`, additional `AtomicFileWriterTests` for the `overwrite: false` enforcement path
 
 
 ### Changed
@@ -44,3 +47,9 @@ All notable changes to BenchmarkGate are documented here.
 
 ### Removed
 - `RegressionPolicy.cs` — superseded by `GatePolicy`
+
+
+### Fixed
+- `CaptureCommand`/`BaselineFile.WriteCandidate` overwrite check had a time-of-check/time-of-use race: `File.Exists` followed by an unconditional write left a window for a concurrent process to create the file in between. Fixed by threading `overwrite` down to `AtomicFileWriter.Commit`, which now enforces it via `File.Move(..., overwrite)` — an atomic OS-level check, not a preceding probe.
+- `CaptureCommand` — empty/whitespace suite names are now rejected (`ExitCodes.InvalidArguments`) instead of silently captured
+- `CaptureCommand` — a results file with zero observations is now rejected instead of producing an empty baseline candidate that would later make every real baseline entry look `Missing`

@@ -71,9 +71,13 @@ internal static class AtomicFileWriter
     };
 
     /// <summary>
-    /// Writes plain text content atomically.
+    /// Writes plain text content atomically. When <paramref name="overwrite"/>
+    /// is false, the underlying commit (File.Move with overwrite: false) is
+    /// the actual enforcement point — not a preceding File.Exists check,
+    /// which would leave a time-of-check/time-of-use race between the check
+    /// and the write.
     /// </summary>
-    public static void Write(string path, string content, bool flushToDisk = false)
+    public static void Write(string path, string content, bool overwrite = true, bool flushToDisk = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(content);
@@ -98,7 +102,7 @@ internal static class AtomicFileWriter
                 }
             }
 
-            Commit(paths.TempPath, paths.FullPath);
+            Commit(paths.TempPath, paths.FullPath, overwrite);
         }
         finally
         {
@@ -109,12 +113,13 @@ internal static class AtomicFileWriter
     /// <summary>
     /// Serializes <paramref name="value"/> directly into the destination file
     /// atomically, without ever holding the full serialized JSON as one
-    /// in-memory string.
+    /// in-memory string. See <see cref="Write"/> for the overwrite semantics.
     /// </summary>
     public static void WriteJson<T>(
         string path,
         T value,
         JsonSerializerOptions? options = null,
+        bool overwrite = true,
         bool flushToDisk = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -133,7 +138,7 @@ internal static class AtomicFileWriter
                 }
             }
 
-            Commit(paths.TempPath, paths.FullPath);
+            Commit(paths.TempPath, paths.FullPath, overwrite);
         }
         finally
         {
@@ -161,9 +166,13 @@ internal static class AtomicFileWriter
             });
     }
 
-    private static void Commit(string tempPath, string destinationPath)
+    private static void Commit(string tempPath, string destinationPath, bool overwrite)
     {
-        File.Move(tempPath, destinationPath, overwrite: true);
+        // File.Move(..., overwrite: false) is itself the atomic check —
+        // if the destination exists, this throws IOException without a
+        // preceding File.Exists probe, so there is no window between
+        // checking and writing for another process to race into.
+        File.Move(tempPath, destinationPath, overwrite);
     }
 
     private static AtomicPaths PrepareTempPath(string path)
