@@ -94,7 +94,7 @@ that might get read.
 
 ## Status / roadmap
 
-See [ROADMAP.md](ROADMAP.md).
+See [docs/ROADMAP.md](ROADMAP.md).
 
 ## License
 
