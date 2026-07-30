@@ -1,4 +1,4 @@
-﻿namespace Bijecta.BenchmarkGate.Tool.Reporting;
+﻿namespace Bijecta.BenchmarkGate.Reporting;
 
 /// <summary>
 /// Thrown when a report file cannot be written (invalid path, access

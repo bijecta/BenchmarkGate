@@ -1,7 +1,7 @@
 using System.Globalization;
 using Bijecta.BenchmarkGate.Core.Evaluation;
 
-namespace Bijecta.BenchmarkGate.Tool.Reporting;
+namespace Bijecta.BenchmarkGate.Reporting;
 
 /// <summary>
 /// Renders a <see cref="SuiteDecision"/> as a compact console table. One

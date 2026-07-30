@@ -1,8 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Bijecta.BenchmarkGate.Storage.FileSystem;
 using Bijecta.BenchmarkGate.Core.Evaluation;
 
-namespace Bijecta.BenchmarkGate.Tool.Reporting;
+namespace Bijecta.BenchmarkGate.Reporting;
 
 /// <summary>
 /// Writes the machine-readable decision document. Each benchmark carries a

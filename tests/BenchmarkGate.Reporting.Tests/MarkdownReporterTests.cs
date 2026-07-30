@@ -1,10 +1,8 @@
 ﻿using Bijecta.BenchmarkGate.Core.Evaluation;
 using Bijecta.BenchmarkGate.Core.Identity;
-using Bijecta.BenchmarkGate.Tool.Reporting;
 using FluentAssertions;
-using Xunit;
 
-namespace Bijecta.BenchmarkGate.Tool.Tests.Reporting;
+namespace Bijecta.BenchmarkGate.Reporting.Tests;
 
 public sealed class MarkdownReporterTests : IDisposable
 {

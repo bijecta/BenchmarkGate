@@ -4,7 +4,7 @@ using Bijecta.BenchmarkGate.Core.Evaluation;
 using Bijecta.BenchmarkGate.Core.Model;
 using Bijecta.BenchmarkGate.Tool.Baseline;
 using Bijecta.BenchmarkGate.Tool.Policy;
-using Bijecta.BenchmarkGate.Tool.Reporting;
+using Bijecta.BenchmarkGate.Reporting;
 
 namespace Bijecta.BenchmarkGate.Tool.Commands;
 

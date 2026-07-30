@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using Bijecta.BenchmarkGate.Storage.FileSystem;
 using FluentAssertions;
 
 namespace Bijecta.BenchmarkGate.Tool.Tests;

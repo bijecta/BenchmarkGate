@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Bijecta.BenchmarkGate.Tool;
+namespace Bijecta.BenchmarkGate.Storage.FileSystem;
 
 /// <summary>
 /// Writes files atomically (write to a temp file, then move into place),
@@ -50,7 +50,7 @@ namespace Bijecta.BenchmarkGate.Tool;
 /// wouldn't coordinate separate CLI processes.
 /// </para>
 /// </remarks>
-internal static class AtomicFileWriter
+public static class AtomicFileWriter
 {
     private const int DefaultBufferSize = 64 * 1024;
 

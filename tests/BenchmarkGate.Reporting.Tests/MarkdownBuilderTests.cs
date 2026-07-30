@@ -1,8 +1,6 @@
-﻿using Bijecta.BenchmarkGate.Tool.Reporting;
-using FluentAssertions;
-using Xunit;
+﻿using FluentAssertions;
 
-namespace Bijecta.BenchmarkGate.Tool.Tests.Reporting;
+namespace Bijecta.BenchmarkGate.Reporting.Tests;
 
 public class MarkdownBuilderTests
 {

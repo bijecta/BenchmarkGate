@@ -1,8 +1,8 @@
 ﻿using System.Xml;
 using System.Xml.Linq;
+using Bijecta.BenchmarkGate.Storage.FileSystem;
 using Bijecta.BenchmarkGate.Core.Evaluation;
-
-namespace Bijecta.BenchmarkGate.Tool.Reporting;
+namespace Bijecta.BenchmarkGate.Reporting;
 
 /// <summary>
 /// Writes a standard JUnit XML report, consumed natively by GitHub Actions,
