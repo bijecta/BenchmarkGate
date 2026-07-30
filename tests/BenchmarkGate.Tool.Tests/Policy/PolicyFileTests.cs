@@ -82,7 +82,7 @@ public sealed class PolicyFileTests : IDisposable
     {
         var path = WriteTempPolicy("{ not valid json");
         var act = () => PolicyFile.Load(path);
-        act.Should().Throw<PolicyFileException>().WithMessage("*not valid JSON*");
+        act.Should().Throw<PolicyFileException>().WithMessage("*invalid JSON syntax*");
     }
 
     [Fact]
@@ -329,14 +329,14 @@ public sealed class PolicyFileTests : IDisposable
     public void Unknown_json_property_throws_under_strict_mode()
     {
         var path = WriteTempPolicy("""
-            { "schemaVersion": 1, "stability": { "minimumMeasurements": 10, "maximumCoefficientOfVariation": 0.05 },
-              "metrics": { "meanNanoseconds": { "direction": "lower-is-better", "warningPercent": 5, "failurePercent": 10, "warningPercnt": 7 } } }
-            """);
+        { "schemaVersion": 1, "stability": { "minimumMeasurements": 10, "maximumCoefficientOfVariation": 0.05 },
+          "metrics": { "meanNanoseconds": { "direction": "lower-is-better", "warningPercent": 5, "failurePercent": 10, "warningPercnt": 7 } } }
+        """);
 
         var act = () => PolicyFile.Load(path);
 
         var exception = act.Should().Throw<PolicyFileException>()
-            .WithMessage("*not valid JSON*")
+            .WithMessage("*invalid JSON syntax*")
             .Which;
 
         exception.InnerException.Should().BeOfType<System.Text.Json.JsonException>();
@@ -387,5 +387,67 @@ public sealed class PolicyFileTests : IDisposable
         policy.Metrics.Should().HaveCount(2);
         policy.Metrics["meanNanoseconds"].Direction.Should().Be(MetricDirection.LowerIsBetter);
         policy.Metrics["operationsPerSecond"].Direction.Should().Be(MetricDirection.HigherIsBetter);
+    }
+
+    [Fact]
+    public void Validation_failure_exposes_structured_validation_result()
+    {
+        var path = WriteTempPolicy("""
+            { "schemaVersion": 1, "stability": { "minimumMeasurements": 0, "maximumCoefficientOfVariation": 0.05 }, "metrics": {} }
+            """);
+
+        var act = () => PolicyFile.Load(path);
+
+        var exception = act.Should().Throw<PolicyFileException>().Which;
+        exception.ValidationResult.Should().NotBeNull();
+        exception.ValidationResult!.Diagnostics.Select(d => d.Descriptor.Id)
+            .Should().BeEquivalentTo(["BGV105", "BGV107"]);
+    }
+
+    [Fact]
+    public void File_access_failures_do_not_populate_validation_result()
+    {
+        var act = () => PolicyFile.Load(Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}.json"));
+
+        act.Should().Throw<PolicyFileException>().Which.ValidationResult.Should().BeNull();
+    }
+
+    [Fact]
+    public void Malformed_json_does_not_populate_validation_result()
+    {
+        var path = WriteTempPolicy("{ not valid json");
+
+        var act = () => PolicyFile.Load(path);
+
+        act.Should().Throw<PolicyFileException>().Which.ValidationResult.Should().BeNull();
+    }
+
+    [Fact]
+    public void Null_metric_definition_reports_a_diagnostic_instead_of_throwing_unexpectedly()
+    {
+        var path = WriteTempPolicy("""
+            { "schemaVersion": 1, "stability": { "minimumMeasurements": 10, "maximumCoefficientOfVariation": 0.05 },
+              "metrics": { "meanNanoseconds": null } }
+            """);
+
+        var act = () => PolicyFile.Load(path);
+
+        var exception = act.Should().Throw<PolicyFileException>().Which;
+        exception.ValidationResult!.Diagnostics.Should().ContainSingle(d => d.Descriptor.Id == "BGV109");
+    }
+
+    [Fact]
+    public void Exception_message_lists_multiple_diagnostics_one_per_line()
+    {
+        var path = WriteTempPolicy("""
+            { "schemaVersion": 1, "stability": { "minimumMeasurements": 0, "maximumCoefficientOfVariation": 0.05 }, "metrics": {} }
+            """);
+
+        var act = () => PolicyFile.Load(path);
+
+        var exception = act.Should().Throw<PolicyFileException>().Which;
+        exception.Message.Should().Contain("contains 2 validation error(s)");
+        exception.Message.Should().Contain("BGV105");
+        exception.Message.Should().Contain("BGV107");
     }
 }

@@ -13,14 +13,15 @@
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+	<AssemblyName>$(MSBuildProjectName)</AssemblyName>
   </PropertyGroup>
 
   <PropertyGroup>
     <Authors>Youness Aamiri</Authors>
-    <Company>Cedar Technologies</Company>
+    <Company>Bijecta</Company>
     <Copyright>Copyright (c) Youness Aamiri</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/AamiriYouness/BenchmarkGate</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Bijecta/BenchmarkGate</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>

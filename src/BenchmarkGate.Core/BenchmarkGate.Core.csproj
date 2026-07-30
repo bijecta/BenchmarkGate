@@ -1,10 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+	<RootNamespace>Bijecta.BenchmarkGate.Core</RootNamespace>
     <PackageId>Bijecta.BenchmarkGate.Core</PackageId>
 	<IsPackable>false</IsPackable>
     <Description>Domain model and pure evaluation logic for Bijecta.BenchmarkGate. No dependency on BenchmarkDotNet, CLI frameworks, or I/O not published standalone; Internal implementation library — see Bijecta.BenchmarkGate.Tool.</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+	<InternalsVisibleTo Include="BenchmarkGate.Core.Tests" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
