@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Bijecta.BenchmarkGate.Core.Baseline;
 using Bijecta.BenchmarkGate.Core.Identity;
 using Bijecta.BenchmarkGate.Core.Model;
+using Bijecta.BenchmarkGate.Storage.FileSystem;
 
 namespace Bijecta.BenchmarkGate.Tool.Baseline;
 

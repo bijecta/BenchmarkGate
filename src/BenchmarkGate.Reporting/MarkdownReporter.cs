@@ -1,6 +1,7 @@
+using Bijecta.BenchmarkGate.Storage.FileSystem;
 using Bijecta.BenchmarkGate.Core.Evaluation;
 
-namespace Bijecta.BenchmarkGate.Tool.Reporting;
+namespace Bijecta.BenchmarkGate.Reporting;
 
 /// <summary>
 /// Writes a GitHub-friendly Markdown summary using <see cref="MarkdownBuilder"/>.

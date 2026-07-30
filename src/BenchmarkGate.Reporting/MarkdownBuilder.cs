@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace Bijecta.BenchmarkGate.Tool.Reporting;
+namespace Bijecta.BenchmarkGate.Reporting;
 
 /// <summary>
 /// A small, fluent Markdown document builder covering exactly what BenchmarkGate's

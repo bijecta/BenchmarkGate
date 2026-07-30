@@ -33,6 +33,8 @@
   <ItemGroup>
     <ProjectReference Include="..\BenchmarkGate.BenchmarkDotNet\BenchmarkGate.BenchmarkDotNet.csproj" />
     <ProjectReference Include="..\BenchmarkGate.Core\BenchmarkGate.Core.csproj" />
+    <ProjectReference Include="..\BenchmarkGate.Reporting\BenchmarkGate.Reporting.csproj" />
+    <ProjectReference Include="..\BenchmarkGate.Storage.FileSystem\BenchmarkGate.Storage.FileSystem.csproj" />
   </ItemGroup>
 
 </Project>

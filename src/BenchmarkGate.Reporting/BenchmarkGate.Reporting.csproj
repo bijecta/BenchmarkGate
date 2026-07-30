@@ -1,0 +1,6 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\BenchmarkGate.Core\BenchmarkGate.Core.csproj" />
+    <ProjectReference Include="..\BenchmarkGate.Storage.FileSystem\BenchmarkGate.Storage.FileSystem.csproj" />
+  </ItemGroup>
+</Project>

@@ -2,6 +2,8 @@
   <Folder Name="/docs/" />
   <Project Path="src/BenchmarkGate.BenchmarkDotNet/BenchmarkGate.BenchmarkDotNet.csproj" />
   <Project Path="src/BenchmarkGate.Core/BenchmarkGate.Core.csproj" />
+  <Project Path="src/BenchmarkGate.Reporting/BenchmarkGate.Reporting.csproj" Id="ba1ad0cd-aad5-411d-95cd-1cbd12c15c9d" />
+  <Project Path="src/BenchmarkGate.Storage.FileSystem/BenchmarkGate.Storage.FileSystem.csproj" Id="5a4a5faa-9875-41d3-afe7-a83ced9201be" />
   <Project Path="src/BenchmarkGate.Tool/BenchmarkGate.Tool.csproj" />
   <Project Path="tests/BenchmarkGate.BenchmarkDotNet.Tests/BenchmarkGate.BenchmarkDotNet.Tests.csproj" />
   <Project Path="tests/BenchmarkGate.Core.Tests/BenchmarkGate.Core.Tests.csproj" />
