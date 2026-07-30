@@ -12,6 +12,22 @@ All notable changes to BenchmarkGate are documented here.
   stable, documented `BGVxxx` codes rather than exceptions, collecting
   every problem in a document in one pass instead of failing fast. See
   ADR-0003 for the design rationale.
+- `PolicyValidator` and supporting `Core.Policy` document model
+  (`PolicyDocument`, `StabilityDefinition`, `MetricDefinition`) —
+  validates policy.json semantics (schema version, stability, and
+  per-metric thresholds) in a single pass instead of failing fast,
+  reporting findings as `BGV1xx` diagnostics. `PolicyFile.Load` is now
+  implemented on top of this shared validator, and `PolicyFileException`
+  exposes the structured `ValidationResult` alongside its message.
+
+### Changed
+- `PolicyFileException`'s message for JSON syntax/structure failures
+  now reads "Policy file has invalid JSON syntax or structure." instead
+  of "Policy file is not valid JSON." — more accurate for type-mismatch
+  and unmapped-property cases, not just syntax errors.
+- `PolicyFile.Load`'s validation-failure messages now list every
+  problem found in the document (one per line, with `BGVxxx` codes),
+  instead of throwing on the first problem encountered.
 
 ## [0.2.0-alpha.1]
 
