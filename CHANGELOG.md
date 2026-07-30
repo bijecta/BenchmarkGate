@@ -2,6 +2,17 @@
 
 All notable changes to BenchmarkGate are documented here.
 
+## [Unreleased]
+
+### Added
+- Validation infrastructure types in `BenchmarkGate.Core.Validation`:
+  `ValidationResult`, `ValidationDiagnostic`, `DiagnosticDescriptor`,
+  `DiagnosticSeverity` — the shared foundation for the upcoming
+  `benchmark-gate validate` command. Diagnostics are identified by
+  stable, documented `BGVxxx` codes rather than exceptions, collecting
+  every problem in a document in one pass instead of failing fast. See
+  ADR-0003 for the design rationale.
+
 ## [0.2.0-alpha.1]
 
 ### Added
