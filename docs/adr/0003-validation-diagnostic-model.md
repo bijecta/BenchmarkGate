@@ -88,3 +88,39 @@ diagnostic is:
 - If cross-input diagnostics or informational-tier findings are needed
   later, both are additive changes to this model, not replacements
   of it.
+
+## Addendum
+
+### PolicyValidator implementation (#4)
+
+Two additional decisions emerged while implementing the first consumer
+of this model:
+
+- **Dictionary values are nullable.** `PolicyDocument.Metrics` is typed
+  as `IReadOnlyDictionary<string, MetricDefinition?>`, not
+  `IReadOnlyDictionary<string, MetricDefinition>`. A policy document
+  such as `"metrics": { "meanNanoseconds": null }` deserializes
+  successfully: it is syntactically valid JSON, but semantically
+  invalid policy input. The validator therefore reports a dedicated
+  `MissingMetricDefinition` diagnostic instead of failing with a
+  `NullReferenceException` on first dereference.
+
+  Every nullable field represented by a Core document model must be
+  treated as reachable from syntactically valid JSON and checked
+  explicitly. Validators must not assume a value is present merely
+  because ordinary generated policy files would normally contain it.
+
+- **Missing and unsupported schema versions are distinct diagnostics.**
+  `MissingSchemaVersion` and `UnsupportedSchemaVersion` use separate
+  diagnostic IDs. An absent schema version and a schema version the
+  current build does not recognize require different remediation:
+  adding the property versus migrating or using a compatible document.
+  Keeping them distinct also allows future migration tooling and
+  report consumers to handle the two cases independently. Once
+  released, these IDs remain separate machine-readable compatibility
+  contracts and must not later be merged or reassigned.
+
+Both decisions are consistent with the original validation model. They
+add collectible findings that the initial design did not enumerate;
+they do not change `DiagnosticSeverity`, `DiagnosticDescriptor`,
+`ValidationDiagnostic`, or `ValidationResult`.
