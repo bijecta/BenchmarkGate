@@ -1,11 +1,9 @@
 ﻿using Bijecta.BenchmarkGate.Core.Evaluation;
 using Bijecta.BenchmarkGate.Core.Identity;
-using Bijecta.BenchmarkGate.Tool.Reporting;
 using FluentAssertions;
 using System.Xml.Linq;
-using Xunit;
 
-namespace Bijecta.BenchmarkGate.Tool.Tests.Reporting;
+namespace Bijecta.BenchmarkGate.Reporting.Tests;
 
 public class JunitReporterTests
 {
