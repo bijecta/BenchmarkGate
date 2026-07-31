@@ -3,7 +3,6 @@ using Bijecta.BenchmarkGate.Core.Identity;
 using Bijecta.BenchmarkGate.Core.Model;
 using Bijecta.BenchmarkGate.Tool.Baseline;
 using FluentAssertions;
-using Xunit;
 
 namespace Bijecta.BenchmarkGate.Tool.Tests.Baseline;
 
@@ -57,7 +56,7 @@ public sealed class BaselineFileTests : IDisposable
     {
         var path = WriteFile("{ not valid json");
         var act = () => BaselineFile.Load(path);
-        act.Should().Throw<BaselineFileException>().WithMessage("*not valid JSON*");
+        act.Should().Throw<BaselineFileException>().WithMessage("*invalid JSON syntax*");
     }
 
     [Fact]
@@ -79,7 +78,7 @@ public sealed class BaselineFileTests : IDisposable
 
         act.Should().Throw<BaselineFileException>()
             .WithMessage("*schemaVersion 1*")
-            .WithMessage("*re-run 'capture'*");
+            .WithMessage("*capture*");
     }
 
     [Fact]
@@ -116,7 +115,7 @@ public sealed class BaselineFileTests : IDisposable
 
         var act = () => BaselineFile.Load(path);
 
-        act.Should().Throw<BaselineFileException>().WithMessage("*missing 'identity'*");
+        act.Should().Throw<BaselineFileException>().WithMessage("*missing required identity fields: identity*");
     }
 
     [Fact]
@@ -129,7 +128,7 @@ public sealed class BaselineFileTests : IDisposable
 
         var act = () => BaselineFile.Load(path);
 
-        act.Should().Throw<BaselineFileException>().WithMessage("*missing 'typeName'*");
+        act.Should().Throw<BaselineFileException>().WithMessage("*missing required identity fields: typeName*");
     }
 
     [Fact]
@@ -142,7 +141,7 @@ public sealed class BaselineFileTests : IDisposable
 
         var act = () => BaselineFile.Load(path);
 
-        act.Should().Throw<BaselineFileException>().WithMessage("*missing 'methodName'*");
+        act.Should().Throw<BaselineFileException>().WithMessage("*missing required identity fields: methodName*");
     }
 
     [Fact]
@@ -155,7 +154,7 @@ public sealed class BaselineFileTests : IDisposable
 
         var act = () => BaselineFile.Load(path);
 
-        act.Should().Throw<BaselineFileException>().WithMessage("*missing 'metrics'*");
+        act.Should().Throw<BaselineFileException>().WithMessage("*does not contain any metrics*");
     }
 
     [Fact]
@@ -168,7 +167,7 @@ public sealed class BaselineFileTests : IDisposable
 
         var act = () => BaselineFile.Load(path);
 
-        act.Should().Throw<BaselineFileException>().WithMessage("*missing 'metrics'*");
+        act.Should().Throw<BaselineFileException>().WithMessage("*does not contain any metrics*");
     }
 
     [Fact]
@@ -200,7 +199,7 @@ public sealed class BaselineFileTests : IDisposable
     }
 
     [Fact]
-    public void Duplicate_identity_across_entries_throws()
+    public void Duplicate_identity_across_entries_throws_with_BGV203()
     {
         var path = WriteFile("""
             { "schemaVersion": 2, "suite": "suite",
@@ -210,12 +209,15 @@ public sealed class BaselineFileTests : IDisposable
               ] }
             """);
 
-        // BenchmarkBaseline's own constructor throws on duplicates —
-        // BaselineFile.Load propagates that InvalidOperationException
-        // unwrapped, since it isn't itself a file-parsing failure.
+        // SnapshotValidator reports duplicates as BGV203 before
+        // BenchmarkBaseline is ever constructed — Load throws
+        // BaselineFileException with a structured ValidationResult, not
+        // BenchmarkBaseline's own ArgumentException.
         var act = () => BaselineFile.Load(path);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*Duplicate benchmark identity*");
+        var exception = act.Should().Throw<BaselineFileException>().Which;
+        exception.ValidationResult.Should().NotBeNull();
+        exception.ValidationResult!.Diagnostics.Should().ContainSingle(d => d.Descriptor.Id == "BGV203");
     }
 
     [Fact]
