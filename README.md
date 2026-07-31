@@ -12,7 +12,7 @@
 
 ---
 
-**Status:** `v0.2.0-alpha.1`. See [ROADMAP.md](ROADMAP.md) for what's
+**Status:** `v0.2.0-alpha.1`. See [ROADMAP.md](docs/ROADMAP.md) for what's
 shipped and what's next.
 
 ## What this is
@@ -94,7 +94,7 @@ that might get read.
 
 ## Status / roadmap
 
-See [docs/ROADMAP.md](ROADMAP.md).
+See [ROADMAP.md](docs/ROADMAP.md).
 
 ## License
 
