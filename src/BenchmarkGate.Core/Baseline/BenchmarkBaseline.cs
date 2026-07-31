@@ -34,17 +34,25 @@ public sealed class BenchmarkBaseline
         if (string.IsNullOrWhiteSpace(suite))
             throw new ArgumentException("Suite name must not be empty.", nameof(suite));
 
+        ArgumentNullException.ThrowIfNull(benchmarks);
+
         Suite = suite;
         Benchmarks = benchmarks;
 
         _byCanonicalIdentity = new Dictionary<string, BaselineEntry>(StringComparer.Ordinal);
         foreach (var entry in benchmarks)
         {
+            if (entry is null)
+            {
+                throw new ArgumentException("Baseline entries must not contain null values.", nameof(benchmarks));
+            }
+
             if (!_byCanonicalIdentity.TryAdd(entry.Identity.CanonicalString, entry))
             {
-                throw new InvalidOperationException(
+                throw new ArgumentException(
                     $"Duplicate benchmark identity in baseline: '{entry.Identity.CanonicalString}'. " +
-                    "Baselines must contain at most one entry per benchmark identity.");
+                    "Baselines must contain at most one entry per benchmark identity.",
+                    nameof(benchmarks));
             }
         }
     }

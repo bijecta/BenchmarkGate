@@ -1,22 +1,31 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Bijecta.BenchmarkGate.Core.Baseline;
-using Bijecta.BenchmarkGate.Core.Identity;
 using Bijecta.BenchmarkGate.Core.Model;
+using Bijecta.BenchmarkGate.Core.Validation;
 using Bijecta.BenchmarkGate.Storage.FileSystem;
 
 namespace Bijecta.BenchmarkGate.Tool.Baseline;
 
 /// <summary>
-/// Thrown when a baseline file is malformed or unreadable. Kept separate
-/// from <c>Bijecta.BenchmarkGate.BenchmarkDotNet.Parsing.BenchmarkResultParseException</c>
+/// Thrown when a baseline file is malformed or unreadable, or fails
+/// SnapshotValidator's semantic validation. Kept separate from
+/// <c>Bijecta.BenchmarkGate.BenchmarkDotNet.Parsing.BenchmarkResultParseException</c>
 /// since baseline files are not BenchmarkDotNet output.
 /// </summary>
 public sealed class BaselineFileException : Exception
 {
     public string SourceFile { get; }
 
-    public BaselineFileException(string sourceFile, string message) : base($"{message} (source file: '{sourceFile}')")
+    /// <summary>
+    /// The structured validation result, if this exception represents a
+    /// SnapshotValidator failure. Null for file-access, JSON-syntax, or
+    /// deserialization-shape failures, which never reach the validator.
+    /// </summary>
+    public ValidationResult? ValidationResult { get; }
+
+    public BaselineFileException(string sourceFile, string message)
+        : base($"{message} (source file: '{sourceFile}')")
     {
         SourceFile = sourceFile;
     }
@@ -25,6 +34,34 @@ public sealed class BaselineFileException : Exception
         : base($"{message} (source file: '{sourceFile}')", innerException)
     {
         SourceFile = sourceFile;
+    }
+
+    private BaselineFileException(string sourceFile, string message, ValidationResult validationResult)
+        : base(message)
+    {
+        SourceFile = sourceFile;
+        ValidationResult = validationResult;
+    }
+
+    internal static BaselineFileException FromValidationResult(string sourceFile, ValidationResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        if (result.IsValid)
+        {
+            throw new ArgumentException(
+                "A valid result cannot be converted into a baseline validation exception.", nameof(result));
+        }
+
+        return new BaselineFileException(sourceFile, BuildMessage(sourceFile, result), result);
+    }
+
+    private static string BuildMessage(string sourceFile, ValidationResult result)
+    {
+        var errors = result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        var lines = errors.Select(d => $"  {d.Descriptor.Id} {d.Path}: {d.Message}");
+
+        return $"Baseline '{sourceFile}' contains {errors.Count} validation error(s):" +
+               Environment.NewLine + string.Join(Environment.NewLine, lines);
     }
 }
 
@@ -47,21 +84,25 @@ public sealed class BaselineWriteException : Exception
 }
 
 /// <summary>
-/// Reads and writes the baseline JSON file format.
+/// Reads and writes the baseline JSON file format. File access, JSON
+/// syntax, and deserialization-shape failures are fail-fast here; semantic
+/// validation is delegated to
+/// <see cref="Bijecta.BenchmarkGate.Core.Validation.SnapshotValidator"/>,
+/// which collects every finding in one pass — the same validator
+/// `benchmark-gate validate` uses. See ADR-0003.
 /// </summary>
 /// <remarks>
-/// v0.2 bumps schemaVersion 1 -> 2: benchmarks[].meanNanoseconds (single
-/// double) is replaced by benchmarks[].metrics (an object keyed by metric
+/// v0.2 bumped schemaVersion 1 -> 2: benchmarks[].meanNanoseconds (single
+/// double) was replaced by benchmarks[].metrics (an object keyed by metric
 /// name). This is a deliberate breaking change with no migration path —
 /// this is a pre-1.0 internal tool with no external consumers, so
 /// schemaVersion 1 files are rejected outright rather than carrying a
 /// compatibility shim. Re-run `capture` to produce a schemaVersion 2
-/// baseline.
+/// baseline. See SnapshotValidator's schemaVersion-1-specific diagnostic
+/// message for the user-facing guidance.
 /// </remarks>
 public static class BaselineFile
 {
-    private const int SupportedSchemaVersion = 2;
-
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         WriteIndented = true,
@@ -73,60 +114,24 @@ public static class BaselineFile
         if (!File.Exists(path))
             throw new BaselineFileException(path, "Baseline file does not exist.");
 
-        BaselineDocumentDto? dto;
+        BaselineDocument? document;
         try
         {
-            dto = JsonSerializer.Deserialize<BaselineDocumentDto>(File.ReadAllText(path));
+            document = JsonSerializer.Deserialize<BaselineDocument>(File.ReadAllText(path));
         }
         catch (JsonException ex)
         {
-            throw new BaselineFileException(path, "Baseline file is not valid JSON.", ex);
+            throw new BaselineFileException(path, "Baseline file has invalid JSON syntax or structure.", ex);
         }
 
-        if (dto is null)
+        if (document is null)
             throw new BaselineFileException(path, "Baseline file deserialized to null.");
 
-        if (dto.SchemaVersion != SupportedSchemaVersion)
-        {
-            var message = string.Create(System.Globalization.CultureInfo.InvariantCulture,
-                $"Unsupported baseline schemaVersion {dto.SchemaVersion}. " +
-                $"This build of Bijecta.BenchmarkGate supports schemaVersion {SupportedSchemaVersion}.");
+        var validation = SnapshotValidator.Validate(document);
+        if (!validation.IsValid)
+            throw BaselineFileException.FromValidationResult(path, validation);
 
-            message += dto.SchemaVersion == 1
-                ? " schemaVersion 1 baselines (single meanNanoseconds field) are no longer " +
-                  "supported — re-run 'capture' to produce a schemaVersion 2 baseline."
-                : " Re-run 'capture' with this version of the tool to produce a supported baseline.";
-
-            throw new BaselineFileException(path, message);
-        }
-
-        if (string.IsNullOrWhiteSpace(dto.Suite))
-            throw new BaselineFileException(path, "Baseline file is missing 'suite'.");
-
-        var entries = new List<BaselineEntry>();
-        foreach (var b in dto.Benchmarks ?? [])
-        {
-            if (b.Identity is null)
-                throw new BaselineFileException(path, "Baseline entry is missing 'identity'.");
-            if (string.IsNullOrWhiteSpace(b.Identity.TypeName))
-                throw new BaselineFileException(path, "Baseline entry identity is missing 'typeName'.");
-            if (string.IsNullOrWhiteSpace(b.Identity.MethodName))
-                throw new BaselineFileException(path, "Baseline entry identity is missing 'methodName'.");
-            if (b.Metrics is null || b.Metrics.Count == 0)
-                throw new BaselineFileException(
-                    path, $"Baseline entry '{b.Identity.TypeName}.{b.Identity.MethodName}' is missing 'metrics'.");
-
-            var identity = new BenchmarkIdentity(
-                b.Identity.TypeName,
-                b.Identity.MethodName,
-                b.Identity.Job ?? "Default",
-                b.Identity.Parameters ?? new Dictionary<string, string>());
-
-            entries.Add(new BaselineEntry(identity, b.Metrics));
-        }
-
-        // BenchmarkBaseline's constructor throws on duplicate identities.
-        return new BenchmarkBaseline(dto.Suite, entries);
+        return BaselineCompiler.CompileValidated(document);
     }
 
     /// <summary>
@@ -146,31 +151,25 @@ public static class BaselineFile
     public static void WriteCandidate(
         string path, string suite, IReadOnlyList<BenchmarkObservation> observations, bool overwrite = true)
     {
-        var dto = new BaselineDocumentDto
-        {
-            SchemaVersion = SupportedSchemaVersion,
-            Suite = suite,
-            Benchmarks = observations
+        var document = new BaselineDocument(
+            SchemaVersion: BaselineFormat.CurrentSchemaVersion,
+            Suite: suite,
+            Benchmarks: observations
                 .OrderBy(o => o.Identity.CanonicalString, StringComparer.Ordinal)
-                .Select(o => new BaselineEntryDto
-                {
-                    Identity = new BaselineIdentityDto
-                    {
-                        TypeName = o.Identity.TypeName,
-                        MethodName = o.Identity.MethodName,
-                        Job = o.Identity.Job,
-                        Parameters = o.Identity.Parameters.Count > 0
+                .Select(o => new BaselineEntryDefinition(
+                    new BaselineIdentityDefinition(
+                        o.Identity.TypeName,
+                        o.Identity.MethodName,
+                        o.Identity.Job,
+                        o.Identity.Parameters.Count > 0
                             ? new Dictionary<string, string>(o.Identity.Parameters)
-                            : null,
-                    },
-                    Metrics = new Dictionary<string, double>(o.Metrics),
-                })
-                .ToList(),
-        };
+                            : null),
+                    new Dictionary<string, double>(o.Metrics)))
+                .ToList());
 
         try
         {
-            AtomicFileWriter.WriteJson(path, dto, SerializerOptions, overwrite);
+            AtomicFileWriter.WriteJson(path, document, SerializerOptions, overwrite);
         }
         catch (IOException ex) when (!overwrite && File.Exists(path))
         {
@@ -183,41 +182,5 @@ public static class BaselineFile
         {
             throw new BaselineWriteException(path, "Failed to write baseline candidate.", ex);
         }
-    }
-
-    private sealed class BaselineDocumentDto
-    {
-        [JsonPropertyName("schemaVersion")]
-        public int SchemaVersion { get; set; }
-
-        [JsonPropertyName("suite")]
-        public string? Suite { get; set; }
-
-        [JsonPropertyName("benchmarks")]
-        public List<BaselineEntryDto>? Benchmarks { get; set; }
-    }
-
-    private sealed class BaselineEntryDto
-    {
-        [JsonPropertyName("identity")]
-        public BaselineIdentityDto? Identity { get; set; }
-
-        [JsonPropertyName("metrics")]
-        public Dictionary<string, double>? Metrics { get; set; }
-    }
-
-    private sealed class BaselineIdentityDto
-    {
-        [JsonPropertyName("typeName")]
-        public string? TypeName { get; set; }
-
-        [JsonPropertyName("methodName")]
-        public string? MethodName { get; set; }
-
-        [JsonPropertyName("job")]
-        public string? Job { get; set; }
-
-        [JsonPropertyName("parameters")]
-        public Dictionary<string, string>? Parameters { get; set; }
     }
 }

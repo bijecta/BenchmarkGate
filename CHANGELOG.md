@@ -19,6 +19,13 @@ All notable changes to BenchmarkGate are documented here.
   reporting findings as `BGV1xx` diagnostics. `PolicyFile.Load` is now
   implemented on top of this shared validator, and `PolicyFileException`
   exposes the structured `ValidationResult` alongside its message.
+- `SnapshotValidator` and supporting `Core.Baseline` document model
+  (`BaselineDocument`, `BaselineEntryDefinition`, `BaselineIdentityDefinition`,
+  `BaselineFormat`) — validates baseline.json semantics (schema version,
+  suite, per-entry identity and metrics) in a single pass, reporting
+  findings as `BGV2xx` diagnostics. `BaselineFile.Load` is now
+  implemented on top of this shared validator, and `BaselineFileException`
+  exposes the structured `ValidationResult` alongside its message.
 
 ### Changed
 - `PolicyFileException`'s message for JSON syntax/structure failures
@@ -26,6 +33,16 @@ All notable changes to BenchmarkGate are documented here.
   of "Policy file is not valid JSON." — more accurate for type-mismatch
   and unmapped-property cases, not just syntax errors.
 - `PolicyFile.Load`'s validation-failure messages now list every
+  problem found in the document (one per line, with `BGVxxx` codes),
+  instead of throwing on the first problem encountered.
+- `BenchmarkBaseline`'s constructor now throws `ArgumentException`
+  instead of a raw `InvalidOperationException` on duplicate benchmark
+  identity, consistent with every other constructor guard, and also
+  guards against a null `benchmarks` argument or null entries.
+- `BaselineFileException`'s message for JSON syntax/structure failures
+  now reads "Baseline file has invalid JSON syntax or structure."
+  instead of "Baseline file is not valid JSON."
+- `BaselineFile.Load`'s validation-failure messages now list every
   problem found in the document (one per line, with `BGVxxx` codes),
   instead of throwing on the first problem encountered.
 
