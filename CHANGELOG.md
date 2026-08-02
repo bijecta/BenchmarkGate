@@ -2,96 +2,32 @@
 
 All notable changes to BenchmarkGate are documented here.
 
-## [Unreleased]
+## [0.3.0-alpha.1] - 03/08/2026
 
 ### Added
-- Validation infrastructure types in `BenchmarkGate.Core.Validation`:
-  `ValidationResult`, `ValidationDiagnostic`, `DiagnosticDescriptor`,
-  `DiagnosticSeverity` — the shared foundation for the upcoming
-  `benchmark-gate validate` command. Diagnostics are identified by
-  stable, documented `BGVxxx` codes rather than exceptions, collecting
-  every problem in a document in one pass instead of failing fast. See
-  ADR-0003 for the design rationale.
-- `PolicyValidator` and supporting `Core.Policy` document model
-  (`PolicyDocument`, `StabilityDefinition`, `MetricDefinition`) —
-  validates policy.json semantics (schema version, stability, and
-  per-metric thresholds) in a single pass instead of failing fast,
-  reporting findings as `BGV1xx` diagnostics. `PolicyFile.Load` is now
-  implemented on top of this shared validator, and `PolicyFileException`
-  exposes the structured `ValidationResult` alongside its message.
-- `SnapshotValidator` and supporting `Core.Baseline` document model
-  (`BaselineDocument`, `BaselineEntryDefinition`, `BaselineIdentityDefinition`,
-  `BaselineFormat`) — validates baseline.json semantics (schema version,
-  suite, per-entry identity and metrics) in a single pass, reporting
-  findings as `BGV2xx` diagnostics. `BaselineFile.Load` is now
-  implemented on top of this shared validator, and `BaselineFileException`
-  exposes the structured `ValidationResult` alongside its message.
-- `ObservationValidator` and `ObservationSetValidator` in
-  `Bijecta.BenchmarkGate.BenchmarkDotNet` — validates BenchmarkDotNet
-  full-JSON exporter output in a single pass (per-file semantics via
-  `BGV300`-`BGV304`, cross-file duplicate identity across a directory
-  parse via `BGV305`), reporting findings instead of failing on the
-  first problem. `BenchmarkResultParseException` now exposes the
-  structured `ValidationResult` alongside its message, matching
-  `PolicyFileException`/`BaselineFileException` from #4/#5. Adapter-owned
-  per ADR-0003 — Core has no knowledge of BenchmarkDotNet's document
-  shape or these diagnostic codes.
+- Validation infrastructure (`ValidationResult`, `ValidationDiagnostic`,
+  `DiagnosticDescriptor`, `DiagnosticSeverity`) in `Core.Validation` (#3)
+- `PolicyValidator` and `Core.Policy` document model (#4)
+- `SnapshotValidator` and `Core.Baseline` document model (#5)
+- `ObservationValidator`/`ObservationSetValidator` for BenchmarkDotNet
+  input, adapter-owned per ADR-0003 (#6)
+- `benchmark-gate validate` command — validates policy/baseline/results
+  without evaluating them, via `--policy`/`--baseline`/`--results`,
+  colorized grouped console output, optional `--json` report,
+  `ExitCodes.ValidationFailed = 12` (#7)
+- `docs/EXIT-CODES.md` — authoritative exit code reference (#8)
 
 ### Changed
-- `PolicyFileException`'s message for JSON syntax/structure failures
-  now reads "Policy file has invalid JSON syntax or structure." instead
-  of "Policy file is not valid JSON." — more accurate for type-mismatch
-  and unmapped-property cases, not just syntax errors.
-- `PolicyFile.Load`'s validation-failure messages now list every
-  problem found in the document (one per line, with `BGVxxx` codes),
-  instead of throwing on the first problem encountered.
-- `BenchmarkBaseline`'s constructor now throws `ArgumentException`
-  instead of a raw `InvalidOperationException` on duplicate benchmark
-  identity, consistent with every other constructor guard, and also
-  guards against a null `benchmarks` argument or null entries.
-- `BaselineFileException`'s message for JSON syntax/structure failures
-  now reads "Baseline file has invalid JSON syntax or structure."
-  instead of "Baseline file is not valid JSON."
-- `BaselineFile.Load`'s validation-failure messages now list every
-  problem found in the document (one per line, with `BGVxxx` codes),
-  instead of throwing on the first problem encountered.
-- `BenchmarkDotNetResultParser.ParseFile`/`ParsePath` reimplemented as
-  deserialize → validate → compile; the JSON-syntax failure message now
-  reads "Result file has invalid JSON syntax or structure." instead of
-  "Result file is not valid JSON."
-- Benchmark identity construction (`Type`/`Method`/job-token-extraction/
-  parameters) is now centralized in `IdentityFactory`, shared by the
-  validator and the parser's compilation step, instead of duplicated.
-- `benchmark-gate validate` command — validates a policy, baseline,
-  and/or BenchmarkDotNet results file/directory without evaluating
-  them, via `--policy`/`--baseline`/`--results` (at least one
-  required, multiple allowed together in one invocation). Console
-  output groups diagnostics by source file, color-coded by severity
-  (red for errors, yellow for warnings, plain when output is
-  redirected). Optional `--json <path>` writes a versioned,
-  multi-artifact validation report. Exit code `12` (`ValidationFailed`)
-  if any requested artifact has error-level diagnostics or could not
-  be validated; `0` otherwise.
-- `PolicyFile.Validate`/`BaselineFile.Validate` — non-compiling
-  validation entry points alongside `Load`, preserving Warning-severity
-  diagnostics that `Load` discards on success.
-- `BenchmarkDotNetInputValidator` (adapter) — non-compiling validation
-  entry point for BenchmarkDotNet result input, parallel to
-  `BenchmarkDotNetResultParser`.
-- `BenchmarkDotNetInputDiagnostics` (`BGV390`-`BGV394`) — adapter-level
-  diagnostics for file access/JSON syntax failures that occur before a
-  document exists to validate, distinct from `BGV300`-`BGV306`'s
-  document/observation-shape findings.
-- `ObservationSetValidator.ValidateWithSources` — returns cross-file
-  duplicate diagnostics with structural source-file ownership, instead
-  of requiring callers to infer it from message text.
+- `PolicyFileException`/`BaselineFileException`/`BenchmarkResultParseException`
+  now expose a structured `ValidationResult` alongside their message
+- `BenchmarkBaseline`'s duplicate-identity guard now throws
+  `ArgumentException` instead of a raw `InvalidOperationException`
+- `ExitCodes` moved to its own file, `Commands/ExitCodes.cs`
 
 ### Known limitation
-- `BdnParameterStringParser` still silently discards parameter
-  fragments without `=` (pre-existing behavior, unchanged by this
-  release). See #16 for tracking a future
-  `BGV306` once the parser preserves parse failures instead of
-  discarding them.
+- Malformed BenchmarkDotNet parameter fragments (e.g. `"N1000000"`
+  without `=`) are still silently discarded by
+  `BdnParameterStringParser` — tracked separately (#16)
 
 ## [0.2.0-alpha.1]
 
