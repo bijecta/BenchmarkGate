@@ -85,4 +85,5 @@ public static class ExitCodes
     public const int Warning = 9;
     public const int InternalError = 10;
     public const int OutputWriteFailure = 11;
+    public const int ValidationFailed = 12;
 }

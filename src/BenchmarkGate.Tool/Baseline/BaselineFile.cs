@@ -7,21 +7,9 @@ using Bijecta.BenchmarkGate.Storage.FileSystem;
 
 namespace Bijecta.BenchmarkGate.Tool.Baseline;
 
-/// <summary>
-/// Thrown when a baseline file is malformed or unreadable, or fails
-/// SnapshotValidator's semantic validation. Kept separate from
-/// <c>Bijecta.BenchmarkGate.BenchmarkDotNet.Parsing.BenchmarkResultParseException</c>
-/// since baseline files are not BenchmarkDotNet output.
-/// </summary>
 public sealed class BaselineFileException : Exception
 {
     public string SourceFile { get; }
-
-    /// <summary>
-    /// The structured validation result, if this exception represents a
-    /// SnapshotValidator failure. Null for file-access, JSON-syntax, or
-    /// deserialization-shape failures, which never reach the validator.
-    /// </summary>
     public ValidationResult? ValidationResult { get; }
 
     public BaselineFileException(string sourceFile, string message)
@@ -65,13 +53,6 @@ public sealed class BaselineFileException : Exception
     }
 }
 
-/// <summary>
-/// Thrown when a baseline file cannot be written (invalid path, access
-/// denied, missing directory, disk full, atomic-write failure, or the
-/// destination already exists and overwrite was not requested). Kept
-/// separate from <see cref="BaselineFileException"/>, which represents
-/// load/parse failures, not write failures.
-/// </summary>
 public sealed class BaselineWriteException : Exception
 {
     public string OutputPath { get; }
@@ -83,24 +64,6 @@ public sealed class BaselineWriteException : Exception
     }
 }
 
-/// <summary>
-/// Reads and writes the baseline JSON file format. File access, JSON
-/// syntax, and deserialization-shape failures are fail-fast here; semantic
-/// validation is delegated to
-/// <see cref="Bijecta.BenchmarkGate.Core.Validation.SnapshotValidator"/>,
-/// which collects every finding in one pass — the same validator
-/// `benchmark-gate validate` uses. See ADR-0003.
-/// </summary>
-/// <remarks>
-/// v0.2 bumped schemaVersion 1 -> 2: benchmarks[].meanNanoseconds (single
-/// double) was replaced by benchmarks[].metrics (an object keyed by metric
-/// name). This is a deliberate breaking change with no migration path —
-/// this is a pre-1.0 internal tool with no external consumers, so
-/// schemaVersion 1 files are rejected outright rather than carrying a
-/// compatibility shim. Re-run `capture` to produce a schemaVersion 2
-/// baseline. See SnapshotValidator's schemaVersion-1-specific diagnostic
-/// message for the user-facing guidance.
-/// </remarks>
 public static class BaselineFile
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -110,6 +73,23 @@ public static class BaselineFile
     };
 
     public static BenchmarkBaseline Load(string path)
+    {
+        var document = Deserialize(path);
+
+        var validation = SnapshotValidator.Validate(document);
+        if (!validation.IsValid)
+            throw BaselineFileException.FromValidationResult(path, validation);
+
+        return BaselineCompiler.CompileValidated(document);
+    }
+
+    public static ValidationResult Validate(string path)
+    {
+        var document = Deserialize(path);
+        return SnapshotValidator.Validate(document);
+    }
+
+    private static BaselineDocument Deserialize(string path)
     {
         if (!File.Exists(path))
             throw new BaselineFileException(path, "Baseline file does not exist.");
@@ -127,27 +107,9 @@ public static class BaselineFile
         if (document is null)
             throw new BaselineFileException(path, "Baseline file deserialized to null.");
 
-        var validation = SnapshotValidator.Validate(document);
-        if (!validation.IsValid)
-            throw BaselineFileException.FromValidationResult(path, validation);
-
-        return BaselineCompiler.CompileValidated(document);
+        return document;
     }
 
-    /// <summary>
-    /// Writes a baseline candidate from a set of observations (used by the
-    /// `capture` command). Output is deterministically ordered by canonical
-    /// identity so the file diffs cleanly in source control.
-    /// </summary>
-    /// <param name="path">Destination file path.</param>
-    /// <param name="suite">Suite name recorded in the baseline document.</param>
-    /// <param name="observations">Observations to capture as baseline entries.</param>
-    /// <param name="overwrite">
-    /// When false, fails if <paramref name="path"/> already exists. This is
-    /// enforced atomically inside AtomicFileWriter's commit (File.Move with
-    /// overwrite: false) — not by a preceding File.Exists check — so there
-    /// is no time-of-check/time-of-use race with another process.
-    /// </param>
     public static void WriteCandidate(
         string path, string suite, IReadOnlyList<BenchmarkObservation> observations, bool overwrite = true)
     {
@@ -174,9 +136,7 @@ public static class BaselineFile
         catch (IOException ex) when (!overwrite && File.Exists(path))
         {
             throw new BaselineWriteException(
-                path,
-                "Destination already exists. Re-run with --overwrite if you intend to replace it.",
-                ex);
+                path, "Destination already exists. Re-run with --overwrite if you intend to replace it.", ex);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

@@ -51,10 +51,32 @@ captureCommand.SetAction(parseResult => CaptureCommand.Run(
     Console.Out,
     Console.Error));
 
+var validatePolicyOption = new Option<string?>("--policy");
+var validateBaselineOption = new Option<string?>("--baseline");
+var validateResultsOption = new Option<string?>("--results");
+var validateJsonOption = new Option<string?>("--json");
+var validateQuietOption = new Option<bool>("--quiet");
+
+var validateCommand = new Command("validate", "Validate a policy, baseline, or observations file without evaluating it.")
+{
+    validatePolicyOption, validateBaselineOption, validateResultsOption, validateJsonOption, validateQuietOption,
+};
+
+validateCommand.SetAction(parseResult => ValidateCommand.Run(
+    parseResult.GetValue(validatePolicyOption),
+    parseResult.GetValue(validateBaselineOption),
+    parseResult.GetValue(validateResultsOption),
+    parseResult.GetValue(validateJsonOption),
+    parseResult.GetValue(validateQuietOption),
+    Console.Out,
+    Console.Error));
+
+
 var rootCommand = new RootCommand("BenchmarkGate — a local-first performance regression gate for BenchmarkDotNet.")
 {
     checkCommand,
     captureCommand,
+    validateCommand,
 };
 
 try

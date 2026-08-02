@@ -77,6 +77,47 @@ Useful flags on `check`:
 | `--fail-on-warning` | Make a Warning-only suite exit non-zero |
 | `--quiet` | Suppress console output (reports/exit code still work) |
 
+## Validating inputs
+
+`benchmark-gate validate` checks a policy, baseline, and/or BenchmarkDotNet
+results file for structural and semantic correctness, without evaluating
+anything — useful for catching a malformed `policy.json` or a corrupted
+results export before it fails a `check` run with a less specific error.
+
+```bash
+benchmark-gate validate --policy ./benchmarks/policy.json
+benchmark-gate validate --baseline ./benchmarks/baseline.json
+benchmark-gate validate --results ./BenchmarkDotNet.Artifacts/results
+```
+
+At least one of `--policy`, `--baseline`, `--results` is required; pass
+multiple together to validate them all in one invocation:
+
+```bash
+benchmark-gate validate --policy ./benchmarks/policy.json --baseline ./benchmarks/baseline.json
+```
+
+Output groups diagnostics by source file, one line per finding, with a
+stable machine-readable code (`BGVxxx`) you can search this repo's issue
+tracker or documentation for:
+
+benchmarks/policy.json
+ERROR BGV105 /stability/minimumMeasurements: Value must be greater than zero; actual value was 0.
+ERROR BGV117 /metrics/meanNanoseconds: warningPercent (10) >= failurePercent (10). warningPercent must be strictly less than failurePercent for the policy to be meaningful.
+
+
+Useful flags on `validate`:
+
+| Flag | Purpose |
+|---|---|
+| `--json <path>` | Write a machine-readable validation report covering every requested artifact |
+| `--quiet` | Suppress console output (report/exit code still work) |
+
+Exit code is `0` if every requested artifact is valid, `12` otherwise —
+independent of `check`'s exit codes, since `validate` answers a different
+question (“is this file correct?”) than `check` does (“do these results
+pass the policy?”).
+
 ## What this is not
 
 - Not a benchmark execution service — BenchmarkDotNet remains the

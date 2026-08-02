@@ -62,11 +62,34 @@ All notable changes to BenchmarkGate are documented here.
 - Benchmark identity construction (`Type`/`Method`/job-token-extraction/
   parameters) is now centralized in `IdentityFactory`, shared by the
   validator and the parser's compilation step, instead of duplicated.
+- `benchmark-gate validate` command — validates a policy, baseline,
+  and/or BenchmarkDotNet results file/directory without evaluating
+  them, via `--policy`/`--baseline`/`--results` (at least one
+  required, multiple allowed together in one invocation). Console
+  output groups diagnostics by source file, color-coded by severity
+  (red for errors, yellow for warnings, plain when output is
+  redirected). Optional `--json <path>` writes a versioned,
+  multi-artifact validation report. Exit code `12` (`ValidationFailed`)
+  if any requested artifact has error-level diagnostics or could not
+  be validated; `0` otherwise.
+- `PolicyFile.Validate`/`BaselineFile.Validate` — non-compiling
+  validation entry points alongside `Load`, preserving Warning-severity
+  diagnostics that `Load` discards on success.
+- `BenchmarkDotNetInputValidator` (adapter) — non-compiling validation
+  entry point for BenchmarkDotNet result input, parallel to
+  `BenchmarkDotNetResultParser`.
+- `BenchmarkDotNetInputDiagnostics` (`BGV390`-`BGV394`) — adapter-level
+  diagnostics for file access/JSON syntax failures that occur before a
+  document exists to validate, distinct from `BGV300`-`BGV306`'s
+  document/observation-shape findings.
+- `ObservationSetValidator.ValidateWithSources` — returns cross-file
+  duplicate diagnostics with structural source-file ownership, instead
+  of requiring callers to infer it from message text.
 
 ### Known limitation
 - `BdnParameterStringParser` still silently discards parameter
   fragments without `=` (pre-existing behavior, unchanged by this
-  release). See #<follow-up-issue-number> for tracking a future
+  release). See #16 for tracking a future
   `BGV306` once the parser preserves parse failures instead of
   discarding them.
 
