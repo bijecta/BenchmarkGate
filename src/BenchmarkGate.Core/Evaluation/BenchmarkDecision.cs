@@ -48,15 +48,11 @@ public sealed record SuiteDecision(
 
     /// <summary>
     /// Maps the suite outcome to the documented process exit codes
-    /// (see docs/exit-codes.md). Precedence: Regressed > Missing > Unstable >
+    /// (see docs/EXIT-CODES.md). Precedence: Regressed > Missing > Unstable >
     /// Warning-if-failOnWarning > Passed. A regression always wins over a
     /// missing or unstable benchmark, so CI surfaces the most actionable
     /// failure first.
     /// </summary>
-    /// <param name="failOnWarning">
-    /// When true, a suite with only Warning-status benchmarks (no
-    /// Regressed/Missing/Unstable) exits non-zero instead of 0.
-    /// </param>
     public int GetExitCode(bool failOnWarning)
     {
         if (RegressedCount > 0) return ExitCodes.Regressed;
@@ -65,25 +61,4 @@ public sealed record SuiteDecision(
         if (failOnWarning && WarningCount > 0) return ExitCodes.Warning;
         return ExitCodes.Passed;
     }
-}
-
-/// <summary>
-/// Stable, documented process exit codes. Do not change meanings after a
-/// stable release without a major version bump (master spec section 12).
-/// </summary>
-public static class ExitCodes
-{
-    public const int Passed = 0;
-    public const int Regressed = 1;
-    public const int InvalidArguments = 2;
-    public const int InvalidBaselineOrPolicy = 3;
-    public const int IncompleteResultSet = 4;
-    public const int IncompatibleEnvironment = 5;
-    public const int UnstableResults = 6;
-    public const int UnapprovedNewBenchmarks = 7;
-    public const int UnsupportedSchema = 8;
-    public const int Warning = 9;
-    public const int InternalError = 10;
-    public const int OutputWriteFailure = 11;
-    public const int ValidationFailed = 12;
 }
