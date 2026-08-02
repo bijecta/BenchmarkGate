@@ -113,4 +113,34 @@ public class BenchmarkDotNetResultParserTests
         var observation = observations.Single();
         observation.Identity.Job.Should().Be("Job-SNYTAA");
     }
+
+    [Fact]
+    public void Multiple_problems_in_one_file_are_all_preserved_in_the_validation_result()
+    {
+        var act = () => BenchmarkDotNetResultParser.ParseFile(FixturePath("duplicate-identity.json"));
+
+        var exception = act.Should().Throw<BenchmarkResultParseException>().Which;
+        exception.ValidationResult.Should().NotBeNull();
+        exception.ValidationResult!.Diagnostics.Should().ContainSingle(d => d.Descriptor.Id == "BGV304");
+    }
+
+    [Fact]
+    public void File_access_failures_do_not_populate_validation_result()
+    {
+        var act = () => BenchmarkDotNetResultParser.ParseFile(FixturePath("does-not-exist.json"));
+
+        act.Should().Throw<BenchmarkResultParseException>().Which.ValidationResult.Should().BeNull();
+    }
+
+    [Fact]
+    public void Cross_file_duplicate_identity_throws_with_BGV305()
+    {
+        var directory = Path.Combine(AppContext.BaseDirectory, "Fixtures", "CrossFileDuplicate");
+
+        var act = () => BenchmarkDotNetResultParser.ParsePath(directory);
+
+        var exception = act.Should().Throw<BenchmarkResultParseException>().Which;
+        exception.ValidationResult.Should().NotBeNull();
+        exception.ValidationResult!.Diagnostics.Should().ContainSingle(d => d.Descriptor.Id == "BGV305");
+    }
 }
