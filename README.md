@@ -12,7 +12,7 @@
 
 ---
 
-**Status:** `v0.2.0-alpha.1`. See [ROADMAP.md](docs/ROADMAP.md) for what's
+**Status:** `v0.3.0-alpha.1`. See [ROADMAP.md](docs/ROADMAP.md) for what's
 shipped and what's next.
 
 ## What this is
@@ -33,7 +33,7 @@ performance contract:
 ## Install
 
 ```bash
-dotnet tool install --global Bijecta.BenchmarkGate.Tool --version 0.2.0-alpha.1
+dotnet tool install --global Bijecta.BenchmarkGate.Tool --version 0.3.0-alpha.1
 ```
 
 ## Quick start
