@@ -6,19 +6,9 @@ using System.Text.Json.Serialization;
 
 namespace Bijecta.BenchmarkGate.Tool.Policy;
 
-/// <summary>
-/// Thrown when a policy file is malformed or unreadable, or fails
-/// PolicyValidator's semantic validation.
-/// </summary>
 public sealed class PolicyFileException : Exception
 {
     public string SourceFile { get; }
-
-    /// <summary>
-    /// The structured validation result, if this exception represents a
-    /// PolicyValidator failure. Null for file-access, JSON-syntax, or
-    /// deserialization-shape failures, which never reach the validator.
-    /// </summary>
     public ValidationResult? ValidationResult { get; }
 
     public PolicyFileException(string sourceFile, string message)
@@ -54,10 +44,7 @@ public sealed class PolicyFileException : Exception
 
     private static string BuildMessage(string sourceFile, ValidationResult result)
     {
-        var errors = result.Diagnostics
-            .Where(d => d.Severity == DiagnosticSeverity.Error)
-            .ToList();
-
+        var errors = result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         var lines = errors.Select(d => $"  {d.Descriptor.Id} {d.Path}: {d.Message}");
 
         return $"Policy '{sourceFile}' contains {errors.Count} validation error(s):" +
@@ -66,25 +53,37 @@ public sealed class PolicyFileException : Exception
 }
 
 /// <summary>
-/// Reads the policy.json file format into a <see cref="GatePolicy"/>. File
-/// access, JSON syntax, and deserialization-shape failures are fail-fast
-/// here; semantic validation is delegated to
-/// <see cref="Bijecta.BenchmarkGate.Core.Validation.PolicyValidator"/>,
-/// which collects every finding in one pass — the same validator
-/// `benchmark-gate validate` uses. See ADR-0003.
+/// Reads the policy.json file format. Load compiles into a usable
+/// GatePolicy (throwing on invalid input); Validate returns the raw
+/// ValidationResult without compiling — used by `benchmark-gate validate`
+/// to surface Warning-severity findings that Load discards on success.
+/// Both share the same Deserialize step. See ADR-0003.
 /// </summary>
 public static class PolicyFile
 {
-    // Disallow unmapped members so a typo'd property name (e.g.
-    // "warningPrecent") fails loudly at load time instead of being
-    // silently ignored and the real property reported as merely "missing".
-    // Requires .NET 8+.
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
     };
 
     public static GatePolicy Load(string path)
+    {
+        var document = Deserialize(path);
+
+        var validation = PolicyValidator.Validate(document);
+        if (!validation.IsValid)
+            throw PolicyFileException.FromValidationResult(path, validation);
+
+        return PolicyCompiler.CompileValidated(document);
+    }
+
+    public static ValidationResult Validate(string path)
+    {
+        var document = Deserialize(path);
+        return PolicyValidator.Validate(document);
+    }
+
+    private static PolicyDocument Deserialize(string path)
     {
         if (!File.Exists(path))
             throw new PolicyFileException(path, "Policy file does not exist.");
@@ -111,10 +110,6 @@ public static class PolicyFile
         if (document is null)
             throw new PolicyFileException(path, "Policy file deserialized to null.");
 
-        var validation = PolicyValidator.Validate(document);
-        if (!validation.IsValid)
-            throw PolicyFileException.FromValidationResult(path, validation);
-
-        return PolicyCompiler.CompileValidated(document);
+        return document;
     }
 }

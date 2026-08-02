@@ -89,4 +89,50 @@ public class ObservationSetValidatorTests
 
         result.IsValid.Should().BeTrue();
     }
+
+    [Fact]
+    public void ValidateWithSources_attributes_duplicate_to_the_later_file()
+    {
+        var documents = new List<ParsedBenchmarkDotNetDocument>
+        {
+            new("a.json", new BdnReportRootDto { Benchmarks = [Benchmark("Shared")] }),
+            new("b.json", new BdnReportRootDto { Benchmarks = [Benchmark("Shared")] }),
+        };
+
+        var sourced = ObservationSetValidator.ValidateWithSources(documents);
+
+        sourced.Should().ContainSingle();
+        sourced[0].SourceFile.Should().Be("b.json");
+        sourced[0].Diagnostic.Descriptor.Id.Should().Be("BGV305");
+    }
+
+    [Fact]
+    public void ValidateWithSources_message_names_both_files()
+    {
+        var documents = new List<ParsedBenchmarkDotNetDocument>
+        {
+            new("a.json", new BdnReportRootDto { Benchmarks = [Benchmark("Shared")] }),
+            new("b.json", new BdnReportRootDto { Benchmarks = [Benchmark("Shared")] }),
+        };
+
+        var diagnostic = ObservationSetValidator.ValidateWithSources(documents).Single().Diagnostic;
+
+        diagnostic.Message.Should().Contain("a.json");
+        diagnostic.Message.Should().Contain("b.json");
+    }
+
+    [Fact]
+    public void Validate_remains_a_compatible_wrapper_over_ValidateWithSources()
+    {
+        var documents = new List<ParsedBenchmarkDotNetDocument>
+        {
+            new("a.json", new BdnReportRootDto { Benchmarks = [Benchmark("Shared")] }),
+            new("b.json", new BdnReportRootDto { Benchmarks = [Benchmark("Shared")] }),
+        };
+
+        var aggregate = ObservationSetValidator.Validate(documents);
+        var sourced = ObservationSetValidator.ValidateWithSources(documents);
+
+        aggregate.Diagnostics.Should().BeEquivalentTo(sourced.Select(s => s.Diagnostic));
+    }
 }
