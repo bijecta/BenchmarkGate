@@ -12,6 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="BenchmarkGate.BenchmarkDotNet.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\BenchmarkGate.Core\BenchmarkGate.Core.csproj" />
   </ItemGroup>
 

@@ -26,6 +26,16 @@ All notable changes to BenchmarkGate are documented here.
   findings as `BGV2xx` diagnostics. `BaselineFile.Load` is now
   implemented on top of this shared validator, and `BaselineFileException`
   exposes the structured `ValidationResult` alongside its message.
+- `ObservationValidator` and `ObservationSetValidator` in
+  `Bijecta.BenchmarkGate.BenchmarkDotNet` — validates BenchmarkDotNet
+  full-JSON exporter output in a single pass (per-file semantics via
+  `BGV300`-`BGV304`, cross-file duplicate identity across a directory
+  parse via `BGV305`), reporting findings instead of failing on the
+  first problem. `BenchmarkResultParseException` now exposes the
+  structured `ValidationResult` alongside its message, matching
+  `PolicyFileException`/`BaselineFileException` from #4/#5. Adapter-owned
+  per ADR-0003 — Core has no knowledge of BenchmarkDotNet's document
+  shape or these diagnostic codes.
 
 ### Changed
 - `PolicyFileException`'s message for JSON syntax/structure failures
@@ -45,6 +55,20 @@ All notable changes to BenchmarkGate are documented here.
 - `BaselineFile.Load`'s validation-failure messages now list every
   problem found in the document (one per line, with `BGVxxx` codes),
   instead of throwing on the first problem encountered.
+- `BenchmarkDotNetResultParser.ParseFile`/`ParsePath` reimplemented as
+  deserialize → validate → compile; the JSON-syntax failure message now
+  reads "Result file has invalid JSON syntax or structure." instead of
+  "Result file is not valid JSON."
+- Benchmark identity construction (`Type`/`Method`/job-token-extraction/
+  parameters) is now centralized in `IdentityFactory`, shared by the
+  validator and the parser's compilation step, instead of duplicated.
+
+### Known limitation
+- `BdnParameterStringParser` still silently discards parameter
+  fragments without `=` (pre-existing behavior, unchanged by this
+  release). See #<follow-up-issue-number> for tracking a future
+  `BGV306` once the parser preserves parse failures instead of
+  discarding them.
 
 ## [0.2.0-alpha.1]
 

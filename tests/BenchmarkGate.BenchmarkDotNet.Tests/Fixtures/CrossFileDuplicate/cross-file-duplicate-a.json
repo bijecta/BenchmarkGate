@@ -1,0 +1,11 @@
+{
+  "Title": "Cross-file-duplicate-a",
+  "Benchmarks": [
+    {
+      "Type": "Ns.CrossFile",
+      "Method": "Shared",
+      "Parameters": "N=1",
+      "Statistics": { "Mean": 500.0 }
+    }
+  ]
+}
