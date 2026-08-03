@@ -2,6 +2,18 @@
 
 All notable changes to BenchmarkGate are documented here.
 
+## [Unreleased]
+
+### Added
+- `Core.Comparison` namespace: `MetricDescriptor`, `OptimizationDirection`,
+  `ChangeDirection` vocabulary types, `PercentDeltaCalculator` /
+  `PercentDeltaResult` / `PercentDeltaStatus` for policy-free percentage-delta
+  calculation, and `MetricCatalog` — a closed, built-in lookup covering
+  `meanNanoseconds` and `allocatedBytesPerOperation` — for known-metric
+  optimization direction. No epsilon substitution for a zero reference; no
+  guessed values for NaN/Infinity input. Foundation for the v0.4.0 `compare`
+  pipeline (#21).
+
 ## [0.3.0-alpha.1] - 03/08/2026
 
 ### Added
