@@ -1,10 +1,11 @@
 using Bijecta.BenchmarkGate.BenchmarkDotNet.Parsing;
 using Bijecta.BenchmarkGate.Core.Baseline;
+using Bijecta.BenchmarkGate.Core.Comparison;
 using Bijecta.BenchmarkGate.Core.Evaluation;
 using Bijecta.BenchmarkGate.Core.Model;
+using Bijecta.BenchmarkGate.Reporting;
 using Bijecta.BenchmarkGate.Tool.Baseline;
 using Bijecta.BenchmarkGate.Tool.Policy;
-using Bijecta.BenchmarkGate.Reporting;
 
 namespace Bijecta.BenchmarkGate.Tool.Commands;
 
@@ -67,7 +68,12 @@ internal static class CheckCommand
             return ExitCodes.InvalidBaselineOrPolicy;
         }
 
-        var decision = RegressionEvaluator.Evaluate(observations, baseline, policy);
+        // Minimal #27 compile-fix only: Compare then Evaluate, replacing the
+        // deleted Evaluate(observations, baseline, policy) overload. This is
+        // NOT #29's CheckCommand rewrite — no compare subcommand wiring, no
+        // reporter changes, no docs. That work stays scoped to #29.
+        var comparison = BenchmarkComparisonEngine.Compare(baseline, observations);
+        var decision = RegressionEvaluator.Evaluate(comparison, policy);
 
         if (!quiet)
         {

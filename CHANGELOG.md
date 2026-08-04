@@ -31,6 +31,10 @@ All notable changes to BenchmarkGate are documented here.
   currently producible — neither `BenchmarkObservation` nor `BaselineEntry`
   carries a per-value source unit today, only `MetricCatalog`'s per-metric-name
   semantic unit, which can't disagree with itself.
+- `Tool.Commands.CheckCommand` updated to call `BenchmarkComparisonEngine.Compare`
+  then `RegressionEvaluator.Evaluate(comparison, policy)`, replacing the deleted
+  `Evaluate(observations, baseline, policy)` overload. Minimal compile-fix only —
+  `CheckCommand`'s full rewrite into pure orchestration is still #29's scope.
 
 ## [0.3.0-alpha.1] - 03/08/2026
 
