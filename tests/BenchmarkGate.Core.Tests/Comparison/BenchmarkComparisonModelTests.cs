@@ -3,7 +3,7 @@ using Bijecta.BenchmarkGate.Core.Identity;
 using FluentAssertions;
 using Xunit;
 
-namespace Bijecta.BenchmarkGate.BenchmarkDotNet.Tests.Comparison;
+namespace Bijecta.BenchmarkGate.Core.Tests.Comparison;
 
 public class BenchmarkComparisonModelTests
 {
