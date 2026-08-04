@@ -13,6 +13,12 @@ All notable changes to BenchmarkGate are documented here.
   optimization direction. No epsilon substitution for a zero reference; no
   guessed values for NaN/Infinity input. Foundation for the v0.4.0 `compare`
   pipeline (#21).
+- `Core.Comparison`: `ComparisonResult`, `BenchmarkComparison`,
+  `BenchmarkComparisonStatus`, `MetricComparison`, `MetricComparisonStatus`,
+  `MetricValue`, `BenchmarkStabilityMeasurement` — immutable, policy-free
+  comparison document types with no pass/fail/stability vocabulary,
+  enforced by a reflection-based test. Foundation for the v0.4.0 `compare`
+  pipeline (#30).
 
 ## [0.3.0-alpha.1] - 03/08/2026
 
