@@ -19,6 +19,18 @@ All notable changes to BenchmarkGate are documented here.
   comparison document types with no pass/fail/stability vocabulary,
   enforced by a reflection-based test. Foundation for the v0.4.0 `compare`
   pipeline (#30).
+- `Core.Comparison.BenchmarkComparisonEngine`: the sole place benchmark
+  matching, metric matching, and delta calculation happen for the v0.4.0
+  `compare` pipeline. Deterministic output ordering via a new
+  `Core.Identity.BenchmarkIdentityComparer`. Policy-free — no threshold or
+  pass/fail vocabulary.
+
+### Changed
+- `Core.Comparison.MetricValue.Unit` is now `string?` rather than `string`.
+  `MetricComparisonStatus.UnitMismatch` is documented as reserved and not
+  currently producible — neither `BenchmarkObservation` nor `BaselineEntry`
+  carries a per-value source unit today, only `MetricCatalog`'s per-metric-name
+  semantic unit, which can't disagree with itself.
 
 ## [0.3.0-alpha.1] - 03/08/2026
 
