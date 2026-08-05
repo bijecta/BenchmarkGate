@@ -83,4 +83,41 @@ public sealed class MarkdownBuilder
         deltaPercent is { } delta
             ? string.Create(CultureInfo.InvariantCulture, $"{(delta >= 0 ? "+" : "")}{delta:F2}%")
             : "-";
+
+    /// <summary>
+    /// Wraps <paramref name="text"/> in a CommonMark-safe inline code span:
+    /// the backtick delimiter is chosen one character longer than the
+    /// longest run of consecutive backticks in <paramref name="text"/>, so
+    /// content containing backticks can never prematurely close the span.
+    /// (.NET reflection names generic types with a literal backtick — e.g.
+    /// <c>List`1</c> — so this is a real case for benchmark type names, not
+    /// a hypothetical one.) Per CommonMark, a single leading or trailing
+    /// space is added when the content itself starts or ends with a
+    /// backtick, so the delimiter and the content's own backtick don't
+    /// visually run together.
+    /// </summary>
+    public static string CodeSpan(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        var longestBacktickRun = 0;
+        var currentRun = 0;
+        foreach (var ch in text)
+        {
+            if (ch == '`')
+            {
+                currentRun++;
+                longestBacktickRun = Math.Max(longestBacktickRun, currentRun);
+            }
+            else
+            {
+                currentRun = 0;
+            }
+        }
+
+        var delimiter = new string('`', longestBacktickRun + 1);
+        var needsPadding = text.StartsWith('`') || text.EndsWith('`');
+
+        return needsPadding ? $"{delimiter} {text} {delimiter}" : $"{delimiter}{text}{delimiter}";
+    }
 }

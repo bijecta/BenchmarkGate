@@ -24,6 +24,13 @@ All notable changes to BenchmarkGate are documented here.
   `compare` pipeline. Deterministic output ordering via a new
   `Core.Identity.BenchmarkIdentityComparer`. Policy-free — no threshold or
   pass/fail vocabulary.
+- `Reporting.ConsoleComparisonReporter`, `Reporting.JsonComparisonReporter`,
+  `Reporting.MarkdownComparisonReporter` — console, JSON (`schemaVersion=1`,
+  independently versioned, full precision preserved), and Markdown output
+  for `ComparisonResult`. No JUnit — no test verdict exists for a
+  policy-free comparison. No pass/fail vocabulary in any of the three.
+- `Reporting.MarkdownBuilder.CodeSpan` — CommonMark-safe backtick-delimited
+  code spans.
 
 ### Changed
 - `Core.Comparison.MetricValue.Unit` is now `string?` rather than `string`.
