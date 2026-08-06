@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <!--
+            Exclude test assemblies from their own coverage numbers
+            coverage should measure src/, not tests/. [*.Tests] excludes
+            every project ending in .Tests (Core.Tests, Reporting.Tests,
+            Tool.Tests, ...); [*IntegrationTests] excludes
+            BenchmarkGate.IntegrationTests specifically, since it has no
+            "src equivalent" to measure at all (it only drives a real
+            subprocess).
+          -->
+          <Exclude>[*.Tests]*,[*IntegrationTests]*</Exclude>
+          <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

@@ -6,6 +6,7 @@
   A local-first performance contract gate for BenchmarkDotNet and CI.
 
   ![build](https://img.shields.io/github/actions/workflow/status/Bijecta/BenchmarkGate/ci.yml?branch=main&style=flat-square&label=build)
+  [![codecov](https://codecov.io/gh/Bijecta/BenchmarkGate/branch/main/graph/badge.svg?style=flat-square)](https://codecov.io/gh/Bijecta/BenchmarkGate)
   ![nuget](https://img.shields.io/nuget/v/Bijecta.BenchmarkGate.Tool?style=flat-square&label=nuget)
   ![license](https://img.shields.io/badge/license-Apache--2.0-4B5163?style=flat-square)
 </div>

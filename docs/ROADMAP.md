@@ -20,30 +20,31 @@ See `PRODUCT-SCOPE.md` for what this tool explicitly is not.
 
 ## v0.1.0-alpha.1 — shipped
 ## v0.2.0-alpha.1 — shipped
+## v0.3.0-alpha.1 — Validation — shipped
+## v0.4.0-alpha.1 — Comparison — shipped
 
-(see CHANGELOG.md for full detail on both)
+(see CHANGELOG.md for full detail on all four)
 
 ## v0.2.x — stabilization (before starting v0.3 work)
 
 Confirm, not implement — these should already be true; this is a checklist
 to verify before building on top of them:
 
-- [ ] baseline schema is explicitly versioned (`schemaVersion` — done, v2)
-- [ ] benchmark identity is centralized (`BenchmarkIdentity` — done)
-- [ ] metric units are normalized (`MetricFormatters` — done)
-- [ ] parsing exceptions are separated from domain validation
+- [x] baseline schema is explicitly versioned (`schemaVersion` — done, v2)
+- [x] benchmark identity is centralized (`BenchmarkIdentity` — done)
+- [x] metric units are normalized (`MetricFormatters` — done)
+- [x] parsing exceptions are separated from domain validation
       (`BenchmarkResultParseException` vs. `PolicyFileException`/
       `BaselineFileException` — done)
-- [ ] commands do not contain evaluation rules (`CheckCommand` orchestrates,
+- [x] commands do not contain evaluation rules (`CheckCommand` orchestrates,
       `RegressionEvaluator` decides — done)
-- [ ] public JSON output has snapshot/regression tests
-- [ ] `docs/BUILD-TOOL-INTEGRATION.md` exists — plain shell, NUKE, and Cake
+- [X] public JSON output has snapshot/regression tests
+- [X] `docs/BUILD-TOOL-INTEGRATION.md` exists — plain shell, NUKE, and Cake
       invocation examples. The tool already installs and runs fine under
       either build system via a standard local-tool manifest (`dotnet tool
       restore`) — this is purely a documentation gap, not a functionality
       gap, and it's cheap to close now rather than leave people guessing.
-- [ ] exit-code meanings are documented in one place (currently inline on
-      `ExitCodes` — consider a standalone `EXIT-CODES.md`)
+- [x] exit-code meanings are documented in one place (`docs/EXIT-CODES.md`)
 
 ## net8.0 multi-targeting (parallel track, not version-gated)
 
@@ -51,65 +52,27 @@ Widen the install floor from net10.0-only to net8.0+net10.0. Small,
 mechanical, no design risk — do whenever convenient, doesn't block
 anything below.
 
-## v0.3.0 — Validation
+## v0.4.x — stabilization (before starting v0.5 work)
 
-New command: `benchmark-gate validate`
+Same purpose as the v0.2.x checklist above: confirm, not implement.
+v0.5.0 (History) builds directly on `ComparisonResult` being trustworthy
+and the CLI surface being solid across platforms — worth locking that
+down explicitly before adding a new command surface on top of it.
 
-Validates, without running the full check pipeline:
-- a policy file
-- a baseline/snapshot file
-- BenchmarkDotNet input
-- (later) a comparison report
-
-Core additions:
-- `ValidationResult`, `ValidationDiagnostic`, `DiagnosticSeverity`,
-  `DiagnosticCode`
-- `PolicyValidator`, `SnapshotValidator`, `ObservationValidator`
-
-Diagnostic codes, namespaced so they're greppable and stable:
-```
-BGV101  warningPercent must be lower than failurePercent
-BGV203  Duplicate benchmark identity
-BGV302  Mean cannot be negative
-BGV401  Unsupported snapshot schema version
-```
-
-Goal: make invalid data explicit before Compare/History add more surface
-that could silently misbehave on bad input.
-
-Not yet: history aggregation, signatures, Merkle trees, profiling, plugin
-loading.
-
-## v0.4.0 — Comparison
-
-New command: `benchmark-gate compare --baseline <path> --current <path>`
-
-The architectural change this version exists for:
-
-```
-Before:  baseline + current + policy → evaluation
-After:   baseline + current → comparison → (+ policy) → evaluation
-```
-
-`check` is refactored to consume `ComparisonResult` rather than compute
-deltas itself. This is the load-bearing change of the whole roadmap —
-everything from here on (history, explain, later) depends on "what
-changed" being a first-class, independently-producible artifact instead
-of something baked into the evaluator.
-
-Core additions:
-- `BenchmarkComparisonEngine`, `ComparisonResult`, `BenchmarkComparison`,
-  `MetricComparison`
-- `PercentDeltaCalculator`
-- `MetricCatalog`, `MetricDescriptor`, `OptimizationDirection`
-
-Comparison statuses: `Comparable`, `Added`, `Removed`,
-`MissingReferenceMetric`, `MissingCandidateMetric`, `UnitMismatch`,
-`InvalidValue`
-
-Important: `compare` succeeds even when results are slower — it describes
-change, it doesn't judge it. `check` applies policy on top of the same
-`ComparisonResult`.
+- [X] Code coverage is measured in CI, not just asserted by test count
+- [X] CI runs the full test suite on Windows, Linux, and macOS —
+      BenchmarkGate is installed via `dotnet tool install` on all
+      three; a Linux-only CI run doesn't actually prove that
+- [X] End-to-end tests exist that install the real packed tool (not an
+      in-process `Command.Run()` call) and invoke it as a subprocess —
+      proves the packed artifact people actually install works, not
+      just the code that builds it
+- [x] Tag-driven release pipeline confirmed working end-to-end
+      (see `.github/workflows/release.yml`: pack, smoke-test the
+      installed package, publish to NuGet.org via Trusted Publishing,
+      auto-generate the GitHub release)
+- [X] A coverage badge is visible in the README, not just collected
+      silently in CI
 
 ## v0.5.0 — Filesystem history
 

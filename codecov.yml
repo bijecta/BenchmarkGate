@@ -1,0 +1,46 @@
+codecov:
+  branch: main
+  require_ci_to_pass: true
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    # Overall project coverage vs. the base commit (main). Fails (red,
+    # blocking status check) if coverage drops by more than 1 percentage
+    # point compared to main -- adjust `threshold` to taste.
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        base: auto
+        if_ci_failed: error
+        informational: false
+
+    # Diff/"patch" coverage -- only the lines actually added or changed in
+    # this PR. Fails if fewer than 80% of new/changed lines are covered.
+    # This is usually the more useful gate day-to-day: it catches
+    # uncovered new code even on a repo whose overall coverage is already
+    # high, without demanding 100% everywhere.
+    patch:
+      default:
+        target: 80%
+        threshold: 0%
+        if_ci_failed: error
+        informational: false
+
+# Posts/updates a PR comment showing overall + diff coverage vs. main.
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
+  require_base: true
+  require_head: true
+
+# Coverage should measure src/, not the test projects themselves --
+# matches coverlet.runsettings' <Exclude> filter, so Codecov and the local
+# HTML report agree on what counts.
+ignore:
+  - "tests/**"

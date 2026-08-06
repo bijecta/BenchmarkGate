@@ -14,7 +14,11 @@ env:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
@@ -31,12 +35,47 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -c Release
 
-      - name: Test
-        run: dotnet test --no-build -c Release --logger "trx" --results-directory ./artifacts/test-results
+      # Solution-wide: this includes BenchmarkGate.IntegrationTests, which
+      # packs + installs the real Tool project and invokes it as a real
+      # subprocess -- not an in-process Command.Run() shortcut. Running on
+      # all three OSes here is the actual point: BenchmarkGate is installed
+      # via `dotnet tool install` on all three, so a single-OS CI run
+      # doesn't prove it's genuinely portable.
+      - name: Test with coverage
+        run: >
+          dotnet test --no-build -c Release
+          --logger "trx"
+          --results-directory ./artifacts/test-results
+          --collect:"XPlat Code Coverage"
+          --settings coverlet.runsettings
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: test-results-${{ matrix.os }}
           path: ./artifacts/test-results
+
+      - name: Generate local HTML coverage report
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          reportgenerator \
+            -reports:"./artifacts/test-results/**/coverage.cobertura.xml" \
+            -targetdir:"./artifacts/coverage-report" \
+            -reporttypes:Html
+
+      - name: Upload HTML coverage report
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-html
+          path: ./artifacts/coverage-report
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v4
+        with:
+          directory: ./artifacts/test-results
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
