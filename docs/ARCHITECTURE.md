@@ -24,11 +24,12 @@ BenchmarkDotNet, (later: Crank, custom JSON/CSV)
                     ▼
                 Compare
                     │
-                    ▼
-                 Check
-                    │
-                    ▼
-                 Report
+          ┌─────────┴─────────┐
+          ▼                   ▼
+  `compare` reports       Check (policy)
+                                │
+                                ▼
+                        `check` reports
 ```
 
 The permanent boundaries, one job each:
@@ -49,6 +50,13 @@ Explain is not part of Check. Check decides; Explain diagnoses. This split
 exists so the gate's pass/fail contract never depends on best-effort
 correlation logic — a build fails or doesn't based on Check alone, and
 Explain adds understanding without ever changing that decision.
+
+Compare and Check are split for the same reason Explain is split from
+Check: `compare` describes what changed without requiring a policy;
+`check` applies a policy on top of the *same* comparison. Both commands
+call the identical Compare step — there is one implementation of "what
+changed," consumed two ways, never two implementations that happen to
+agree. See ADR-0005 (comparison facts vs. evaluation verdicts)
 
 ## Solution layout
 

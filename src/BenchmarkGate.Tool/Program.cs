@@ -71,10 +71,31 @@ validateCommand.SetAction(parseResult => ValidateCommand.Run(
     Console.Out,
     Console.Error));
 
+var compareResultsOption = new Option<string>("--results") { Required = true };
+var compareBaselineOption = new Option<string>("--baseline") { Required = true };
+var compareFormatOption = new Option<string>("--format") { DefaultValueFactory = _ => "console" };
+var compareOutputOption = new Option<string?>("--output");
+var compareQuietOption = new Option<bool>("--quiet");
+
+var compareCommand = new Command("compare", "Compare BenchmarkDotNet results against a baseline. Policy-free — no pass/fail verdict.")
+{
+    compareResultsOption, compareBaselineOption, compareFormatOption, compareOutputOption, compareQuietOption,
+};
+
+compareCommand.SetAction(parseResult => CompareCommand.Run(
+    parseResult.GetValue(compareResultsOption)!,
+    parseResult.GetValue(compareBaselineOption)!,
+    parseResult.GetValue(compareFormatOption)!,
+    parseResult.GetValue(compareOutputOption),
+    parseResult.GetValue(compareQuietOption),
+    Console.Out,
+    Console.Error));
+
 
 var rootCommand = new RootCommand("BenchmarkGate — a local-first performance regression gate for BenchmarkDotNet.")
 {
     checkCommand,
+    compareCommand,
     captureCommand,
     validateCommand,
 };
