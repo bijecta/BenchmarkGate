@@ -4,6 +4,8 @@ All notable changes to BenchmarkGate are documented here.
 
 ## [Unreleased]
 
+## [0.4.0-alpha.1] - 06/08/2026
+
 ### Added
 - `Core.Comparison` namespace: `MetricDescriptor`, `OptimizationDirection`,
   `ChangeDirection` vocabulary types, `PercentDeltaCalculator` /
@@ -23,38 +25,46 @@ All notable changes to BenchmarkGate are documented here.
   matching, metric matching, and delta calculation happen for the v0.4.0
   `compare` pipeline. Deterministic output ordering via a new
   `Core.Identity.BenchmarkIdentityComparer`. Policy-free — no threshold or
-  pass/fail vocabulary.
+  pass/fail vocabulary (#26).
 - `Reporting.ConsoleComparisonReporter`, `Reporting.JsonComparisonReporter`,
   `Reporting.MarkdownComparisonReporter` — console, JSON (`schemaVersion=1`,
   independently versioned, full precision preserved), and Markdown output
   for `ComparisonResult`. No JUnit — no test verdict exists for a
-  policy-free comparison. No pass/fail vocabulary in any of the three.
+  policy-free comparison. No pass/fail vocabulary in any of the three (#28).
 - `Reporting.MarkdownBuilder.CodeSpan` — CommonMark-safe backtick-delimited
-  code spans.
+  code spans (#28).
 - `benchmark-gate compare` command — reports what changed between a
   baseline and a set of results (matching, deltas, direction) without
   requiring a `policy.json` or producing a pass/fail verdict. Supports
   `console` (default), `json`, and `markdown` output via `--format`;
   `--output <path>` writes to a file instead of stdout (required for
-  `json`/`markdown`, since those reporters only write to a path). Always
-  exits `Passed` (0) once it successfully produces a comparison — an
-  added/removed benchmark or a slower metric is a comparison result, not
-  a process failure.
+  `json`/`markdown`). Always exits `Passed` (0) once it successfully
+  produces a comparison (#29).
+- `docs/adr/0004-versioned-artifacts.md` — the `schemaVersion` convention
+  across every persisted artifact.
+- `docs/adr/0005-comparison-facts-vs-evaluation-verdicts.md` — the
+  `BenchmarkComparisonEngine`/`RegressionEvaluator` architectural split
+  underlying this release.
 
 ### Changed
+- `RegressionEvaluator.Evaluate(observations, baseline, policy)` replaced
+  with `Evaluate(comparison, policy)` — the old signature is deleted
+  entirely, no forwarding overload. All benchmark matching, metric
+  matching, and delta calculation moved to `BenchmarkComparisonEngine`;
+  `RegressionEvaluator`'s only remaining job is policy interpretation over
+  precomputed comparison facts. A policy metric with a non-finite value
+  now produces no `MetricDecision` (deliberate behavior change from the
+  pre-v0.4.0 evaluator, which silently computed a NaN-arithmetic verdict).
+  `SuiteDecision.Benchmarks` now follows canonical identity order rather
+  than caller-supplied insertion order (#27).
 - `Core.Comparison.MetricValue.Unit` is now `string?` rather than `string`.
   `MetricComparisonStatus.UnitMismatch` is documented as reserved and not
   currently producible — neither `BenchmarkObservation` nor `BaselineEntry`
   carries a per-value source unit today, only `MetricCatalog`'s per-metric-name
-  semantic unit, which can't disagree with itself.
-- `Tool.Commands.CheckCommand` updated to call `BenchmarkComparisonEngine.Compare`
-  then `RegressionEvaluator.Evaluate(comparison, policy)`, replacing the deleted
-  `Evaluate(observations, baseline, policy)` overload. Minimal compile-fix only —
-  `CheckCommand`'s full rewrite into pure orchestration is still #29's scope.
-- `Tool.Commands.CheckCommand` documentation updated to reflect its actual
-  orchestration (`BenchmarkComparisonEngine.Compare` then
-  `RegressionEvaluator.Evaluate`) — no behavior change; the real
-  refactor happened during #27's compile-fix.
+  semantic unit, which can't disagree with itself (#26).
+- `Tool.Commands.CheckCommand` now calls `BenchmarkComparisonEngine.Compare`
+  then `RegressionEvaluator.Evaluate(comparison, policy)`, replacing the
+  deleted `Evaluate(observations, baseline, policy)` overload (#27, #29).
 
 ## [0.3.0-alpha.1] - 03/08/2026
 
