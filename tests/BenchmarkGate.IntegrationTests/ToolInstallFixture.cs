@@ -111,7 +111,7 @@ public sealed class ToolInstallFixture : IAsyncLifetime
     private static string FindRepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "BenchmarkGate.sln")))
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "BenchmarkGate.slnx")))
         {
             dir = dir.Parent;
         }
