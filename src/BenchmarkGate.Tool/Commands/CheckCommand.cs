@@ -12,14 +12,24 @@ namespace Bijecta.BenchmarkGate.Tool.Commands;
 /// <summary>
 /// Implements <c>benchmark-gate check</c>. Argument acquisition lives in
 /// Program.cs (System.CommandLine, per ADR-0002). This type orchestrates:
-/// parse -> load baseline -> load policy -> evaluate -> report -> exit code.
+/// parse -> load baseline -> load policy -> BenchmarkComparisonEngine.Compare
+/// -> RegressionEvaluator.Evaluate -> report -> exit code.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Report files are written independently (Markdown, JSON, JUnit are not a
 /// transaction) — if a later report fails, earlier ones may already exist
 /// on disk. That's deliberate: these are separate artifacts, not a single
 /// atomic output, and best-effort sequential writing is the right model
 /// here rather than a cross-file rollback.
+/// </para>
+/// <para>
+/// This type must not itself match benchmarks, match metrics, check units,
+/// calculate deltas, or derive direction — all of that is
+/// <c>BenchmarkComparisonEngine</c>'s job, called once, from one place, same
+/// as <c>CompareCommand</c>. It only calls <c>RegressionEvaluator.Evaluate</c>
+/// on top of that shared comparison to apply policy — see ADR-0004.
+/// </para>
 /// </remarks>
 internal static class CheckCommand
 {
@@ -68,10 +78,6 @@ internal static class CheckCommand
             return ExitCodes.InvalidBaselineOrPolicy;
         }
 
-        // Minimal #27 compile-fix only: Compare then Evaluate, replacing the
-        // deleted Evaluate(observations, baseline, policy) overload. This is
-        // NOT #29's CheckCommand rewrite — no compare subcommand wiring, no
-        // reporter changes, no docs. That work stays scoped to #29.
         var comparison = BenchmarkComparisonEngine.Compare(baseline, observations);
         var decision = RegressionEvaluator.Evaluate(comparison, policy);
 
