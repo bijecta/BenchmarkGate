@@ -77,6 +77,38 @@ Useful flags on `check`:
 | `--fail-on-warning` | Make a Warning-only suite exit non-zero |
 | `--quiet` | Suppress console output (reports/exit code still work) |
 
+## Comparing without a policy
+
+`benchmark-gate compare` reports what changed between a baseline and a set
+of results — matching, deltas, direction — without requiring a
+`policy.json` or producing a pass/fail verdict. Useful for a quick "what
+moved" check, a PR comment, or feeding a dashboard, when you don't want
+`check`'s policy machinery in the loop.
+
+```bash
+benchmark-gate compare --results ./BenchmarkDotNet.Artifacts/results --baseline ./benchmarks/baseline.json
+```
+
+Write a report to a file instead of stdout with `--format` and `--output`:
+
+```bash
+benchmark-gate compare --results ./BenchmarkDotNet.Artifacts/results --baseline ./benchmarks/baseline.json --format json --output ./compare.json
+benchmark-gate compare --results ./BenchmarkDotNet.Artifacts/results --baseline ./benchmarks/baseline.json --format markdown --output ./compare.md
+```
+
+`compare` always exits `0` once it successfully produces a comparison — an
+added benchmark, a removed benchmark, or a metric that got slower are
+comparison *results*, not process failures. Use `check` when you need a
+build to fail on regression.
+
+Useful flags on `compare`:
+
+| Flag | Purpose |
+|---|---|
+| `--format <console\|json\|markdown>` | Output format (default: `console`) |
+| `--output <path>` | Write the report to a file instead of stdout. Required for `--format json`/`--format markdown` |
+| `--quiet` | Suppress console output (an explicit `--output` file still gets written) |
+
 ## Validating inputs
 
 `benchmark-gate validate` checks a policy, baseline, and/or BenchmarkDotNet
@@ -117,6 +149,7 @@ Exit code is `0` if every requested artifact is valid, `12` otherwise —
 independent of `check`'s exit codes, since `validate` answers a different
 question (“is this file correct?”) than `check` does (“do these results
 pass the policy?”).
+
 
 ## What this is not
 

@@ -8,18 +8,18 @@ change without a major version bump.
 
 | Code | Name | Meaning | Returned by |
 |---|---|---|---|
-| 0 | `Passed` | The command completed successfully with no failures. | `check`, `capture`, `validate` |
+| 0 | `Passed` | The command completed successfully with no failures. | `check`, `compare`, `capture`, `validate` |
 | 1 | `Regressed` | At least one benchmark regressed past its policy's failure threshold. | `check` |
-| 2 | `InvalidArguments` | The command's arguments were invalid or incomplete — e.g. an empty `--suite`, an output path that already exists without `--overwrite`, or `validate` invoked with none of `--policy`/`--baseline`/`--results`. | `check`, `capture`, `validate` |
-| 3 | `InvalidBaselineOrPolicy` | The baseline or policy file failed to load — missing, malformed, or fails semantic validation. | `check` |
+| 2 | `InvalidArguments` | The command's arguments were invalid or incomplete — e.g. an empty `--suite`, an output path that already exists without `--overwrite`, `compare` invoked with `--format json`/`--format markdown` and no `--output`, or `validate` invoked with none of `--policy`/`--baseline`/`--results`. | `check`, `compare`, `capture`, `validate` |
+| 3 | `InvalidBaselineOrPolicy` | The baseline or policy file failed to load — missing, malformed, or fails semantic validation. | `check`, `compare` |
 | 4 | `IncompleteResultSet` | The baseline contains a benchmark not present in the current results (`Missing` status). | `check` |
 | 5 | `IncompatibleEnvironment` | Reserved for future functionality — an environment-compatibility evaluator (deferred past v0.1, see ROADMAP.md). Verified: not currently returned by `SuiteDecision.GetExitCode` or any command. | — |
 | 6 | `UnstableResults` | At least one benchmark failed the stability gate (too few measurements, or coefficient of variation above the policy's threshold). | `check` |
 | 7 | `UnapprovedNewBenchmarks` | Reserved for future functionality — a `--reject-new`-style gate on benchmarks with no baseline entry. Verified: not currently returned by `SuiteDecision.GetExitCode` or any command. | — |
-| 8 | `UnsupportedSchema` | The BenchmarkDotNet results file/directory failed to parse — missing, malformed, unsupported schema, or (for `capture`) parsed to zero observations. | `check`, `capture` |
+| 8 | `UnsupportedSchema` | The BenchmarkDotNet results file/directory failed to parse — missing, malformed, unsupported schema, or (for `capture`) parsed to zero observations. | `check`, `compare`, `capture` |
 | 9 | `Warning` | A Warning-only suite (no Regressed, Missing, or Unstable benchmarks) evaluated with `--fail-on-warning`. | `check` |
 | 10 | `InternalError` | An unexpected, unhandled exception reached the process boundary — a bug, not an expected failure mode. See `Program.cs`'s top-level catch. | any command |
-| 11 | `OutputWriteFailure` | A requested report (Markdown/JSON/JUnit) or baseline candidate could not be written to disk. | `check`, `capture`, `validate` |
+| 11 | `OutputWriteFailure` | A requested report (Markdown/JSON/JUnit) or baseline candidate could not be written to disk. | `check`, `compare`, `capture`, `validate` |
 | 12 | `ValidationFailed` | At least one artifact requested via `validate` has error-level diagnostics, or could not be read/parsed at all. Used uniformly regardless of whether the artifact was a policy, baseline, or results file, and regardless of whether the cause was semantic (a validation rule failed) or syntactic (malformed JSON) — `validate` answers "is this file valid", not "which parser phase rejected it". | `validate` |
 
 ## Notes
@@ -41,3 +41,11 @@ change without a major version bump.
   `Warning`-if-`--fail-on-warning` > `Passed`. A regression always wins
   over a missing or unstable benchmark, so CI surfaces the most
   actionable failure first.
+- **`compare` has no severity verdict at all.** Unlike `check`, `compare`
+  always returns `Passed` (0) once it successfully produces a comparison —
+  a regression, an added/removed benchmark, or a missing metric are
+  comparison *results*, not process failures. `compare` never returns
+  `Regressed`, `IncompleteResultSet`, `UnstableResults`, `Warning`, or
+  `ValidationFailed`; those are `check`-only (or, for `ValidationFailed`,
+  `validate`-only) outcomes that require a policy or validation rules
+  `compare` doesn't have.

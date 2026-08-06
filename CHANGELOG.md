@@ -31,6 +31,15 @@ All notable changes to BenchmarkGate are documented here.
   policy-free comparison. No pass/fail vocabulary in any of the three.
 - `Reporting.MarkdownBuilder.CodeSpan` — CommonMark-safe backtick-delimited
   code spans.
+- `benchmark-gate compare` command — reports what changed between a
+  baseline and a set of results (matching, deltas, direction) without
+  requiring a `policy.json` or producing a pass/fail verdict. Supports
+  `console` (default), `json`, and `markdown` output via `--format`;
+  `--output <path>` writes to a file instead of stdout (required for
+  `json`/`markdown`, since those reporters only write to a path). Always
+  exits `Passed` (0) once it successfully produces a comparison — an
+  added/removed benchmark or a slower metric is a comparison result, not
+  a process failure.
 
 ### Changed
 - `Core.Comparison.MetricValue.Unit` is now `string?` rather than `string`.
@@ -42,6 +51,10 @@ All notable changes to BenchmarkGate are documented here.
   then `RegressionEvaluator.Evaluate(comparison, policy)`, replacing the deleted
   `Evaluate(observations, baseline, policy)` overload. Minimal compile-fix only —
   `CheckCommand`'s full rewrite into pure orchestration is still #29's scope.
+- `Tool.Commands.CheckCommand` documentation updated to reflect its actual
+  orchestration (`BenchmarkComparisonEngine.Compare` then
+  `RegressionEvaluator.Evaluate`) — no behavior change; the real
+  refactor happened during #27's compile-fix.
 
 ## [0.3.0-alpha.1] - 03/08/2026
 

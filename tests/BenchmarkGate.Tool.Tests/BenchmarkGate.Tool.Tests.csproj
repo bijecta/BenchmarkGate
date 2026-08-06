@@ -16,6 +16,12 @@
   </ItemGroup>
 
   <ItemGroup>
+	<None Include="Fixtures\sample-results.json">
+	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	</None>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\BenchmarkGate.Tool\BenchmarkGate.Tool.csproj" />
   </ItemGroup>
 
