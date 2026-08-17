@@ -1,0 +1,11 @@
+{
+  "Title": "ValidMultiFile-b",
+  "Benchmarks": [
+    {
+      "Type": "Ns.MultiFile",
+      "Method": "MethodB",
+      "Parameters": "N=1",
+      "Statistics": { "Mean": 200.0 }
+    }
+  ]
+}

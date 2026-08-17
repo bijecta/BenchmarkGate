@@ -168,4 +168,48 @@ public class BenchmarkDotNetResultParserTests
         exception.ValidationResult!.Diagnostics.Should().Contain(d => d.Descriptor.Id == "BGV306");
         exception.ValidationResult!.Diagnostics.Should().Contain(d => d.Descriptor.Id == "BGV304");
     }
+
+    [Fact]
+    public void ParsePath_on_a_directory_with_no_json_files_throws_typed_exception()
+    {
+        var emptyDirectory = Path.Combine(AppContext.BaseDirectory, "Fixtures", "EmptyDirectory");
+        Directory.CreateDirectory(emptyDirectory);
+
+        var act = () => BenchmarkDotNetResultParser.ParsePath(emptyDirectory);
+
+        act.Should().Throw<BenchmarkResultParseException>()
+            .WithMessage("*No *.json result files found*");
+    }
+
+    [Fact]
+    public void ParsePath_on_a_nonexistent_path_throws_typed_exception()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "does-not-exist-at-all");
+
+        var act = () => BenchmarkDotNetResultParser.ParsePath(path);
+
+        act.Should().Throw<BenchmarkResultParseException>()
+            .WithMessage("*Results path does not exist*");
+    }
+
+    [Fact]
+    public void Document_that_deserializes_to_null_throws_typed_exception()
+    {
+        // null-document.json contains the literal JSON token `null`.
+        var act = () => BenchmarkDotNetResultParser.ParseFile(FixturePath("null-document.json"));
+
+        act.Should().Throw<BenchmarkResultParseException>()
+            .WithMessage("*deserialized to null*");
+    }
+
+    [Fact]
+    public void ParsePath_on_a_directory_with_valid_files_returns_merged_observations()
+    {
+        var directory = Path.Combine(AppContext.BaseDirectory, "Fixtures", "ValidMultiFile");
+
+        var observations = BenchmarkDotNetResultParser.ParsePath(directory);
+
+        observations.Should().HaveCount(2);
+        observations.Select(o => o.Identity.MethodName).Should().BeEquivalentTo(["MethodA", "MethodB"]);
+    }
 }
