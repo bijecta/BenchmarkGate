@@ -1,4 +1,4 @@
-# ADR-0004: Comparison facts vs. evaluation verdicts
+# ADR-0005: Comparison facts vs. evaluation verdicts
 
 ## Status
 Accepted
