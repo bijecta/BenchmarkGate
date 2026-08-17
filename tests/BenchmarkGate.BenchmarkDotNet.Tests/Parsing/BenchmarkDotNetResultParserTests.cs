@@ -3,7 +3,7 @@ using Bijecta.BenchmarkGate.Core.Model;
 using FluentAssertions;
 using Xunit;
 
-namespace Bijecta.BenchmarkGate.BenchmarkDotNet.Tests;
+namespace Bijecta.BenchmarkGate.BenchmarkDotNet.Tests.Parsing;
 
 public class BenchmarkDotNetResultParserTests
 {
@@ -142,5 +142,30 @@ public class BenchmarkDotNetResultParserTests
         var exception = act.Should().Throw<BenchmarkResultParseException>().Which;
         exception.ValidationResult.Should().NotBeNull();
         exception.ValidationResult!.Diagnostics.Should().ContainSingle(d => d.Descriptor.Id == "BGV305");
+    }
+
+    [Fact]
+    public void Malformed_parameter_fragment_throws_with_BGV306()
+    {
+        var act = () => BenchmarkDotNetResultParser.ParseFile(FixturePath("malformed-parameter.json"));
+
+        var exception = act.Should().Throw<BenchmarkResultParseException>().Which;
+        exception.ValidationResult.Should().NotBeNull();
+        exception.ValidationResult!.Diagnostics.Should().ContainSingle(d => d.Descriptor.Id == "BGV306");
+    }
+
+    [Fact]
+    public void Malformed_fragment_that_drops_the_only_parameter_can_collide_with_a_parameterless_benchmark()
+    {
+        // parameter-collision.json: two entries, same Type/Method/DisplayInfo —
+        // one has Parameters "N1000000" (malformed, parses to {}), the other
+        // has no Parameters at all — both resolve to the same canonical
+        // identity once the malformed fragment is dropped.
+        var act = () => BenchmarkDotNetResultParser.ParseFile(FixturePath("parameter-collision.json"));
+
+        var exception = act.Should().Throw<BenchmarkResultParseException>().Which;
+        exception.ValidationResult.Should().NotBeNull();
+        exception.ValidationResult!.Diagnostics.Should().Contain(d => d.Descriptor.Id == "BGV306");
+        exception.ValidationResult!.Diagnostics.Should().Contain(d => d.Descriptor.Id == "BGV304");
     }
 }

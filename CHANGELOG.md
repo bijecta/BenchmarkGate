@@ -4,6 +4,26 @@ All notable changes to BenchmarkGate are documented here.
 
 ## [Unreleased]
 
+### Fixed
+- `BdnParameterStringParser` no longer silently discards malformed BenchmarkDotNet
+  parameter fragments (e.g. `N1000000` missing its `=`, or `=1000000` with an empty
+  key). Parsing now returns both successfully parsed parameters and structured
+  parse issues via the new `ParameterParseResult`/`ParameterParseIssue` types.
+- Added diagnostic `BGV306` (Error) — malformed BenchmarkDotNet parameter fragment,
+  reported at `/Benchmarks/{index}/Parameters`. A malformed fragment can silently
+  drop from a benchmark's identity, which was confirmed (via fixture testing) able
+  to collapse two otherwise-distinct benchmarks into the same canonical identity —
+  so this blocks observation compilation rather than being a cosmetic warning.
+
+### Changed
+- `IdentityFactory.TryCreate` renamed to `IdentityFactory.Create` and now returns
+  `IdentityCreationResult(BenchmarkIdentity? Identity, IReadOnlyList<ParameterParseIssue> ParameterIssues)`
+  instead of a bare `BenchmarkIdentity?`, so parameter-string interpretation happens
+  in exactly one place and both `ObservationValidator` and
+  `BenchmarkDotNetResultParser` consume the same result. All call sites
+  (`ObservationValidator`, `ObservationSetValidator`, `BenchmarkDotNetResultParser`)
+  updated accordingly. Pre-1.0 breaking change, no external consumers.
+
 ## [0.4.0-alpha.1] - 06/08/2026
 
 ### Added
