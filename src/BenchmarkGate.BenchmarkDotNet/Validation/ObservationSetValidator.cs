@@ -24,7 +24,7 @@ internal static class ObservationSetValidator
 
             foreach (var benchmark in parsed.Document.Benchmarks ?? [])
             {
-                var identity = IdentityFactory.TryCreate(benchmark);
+                var identity = IdentityFactory.Create(benchmark).Identity;
                 if (identity is null || !identitiesInThisFile.Add(identity))
                     continue;
 

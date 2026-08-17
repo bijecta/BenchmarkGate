@@ -8,7 +8,9 @@ namespace Bijecta.BenchmarkGate.BenchmarkDotNet.Validation;
 /// Validates one deserialized BenchmarkDotNet report document, collecting
 /// every finding in one pass rather than failing fast. Adapter-owned per
 /// ADR-0003 — Core has no knowledge of BenchmarkDotNet's document shape or
-/// these BGV3xx codes.
+/// these BGV3xx codes. Parameter-string parsing is never performed here
+/// directly — all identity/parameter interpretation goes through
+/// IdentityFactory (see Issue #16).
 /// </summary>
 internal static class ObservationValidator
 {
@@ -61,8 +63,17 @@ internal static class ObservationValidator
             // constructible identity — an entry already missing Type/Method
             // has no trustworthy identity to compare, and would otherwise
             // produce a spurious duplicate alongside its real BGV301/302.
-            var identity = IdentityFactory.TryCreate(benchmark);
-            if (identity is not null && !seenIdentities.Add(identity))
+            var identityResult = IdentityFactory.Create(benchmark);
+
+            foreach (var issue in identityResult.ParameterIssues)
+            {
+                diagnostics.Add(new ValidationDiagnostic(
+                    ObservationValidatorDiagnostics.MalformedParameterFragment,
+                    $"{path}/Parameters",
+                    DescribeParameterIssue(issue)));
+            }
+
+            if (identityResult.Identity is { } identity && !seenIdentities.Add(identity))
             {
                 diagnostics.Add(new ValidationDiagnostic(
                     ObservationValidatorDiagnostics.DuplicateIdentityWithinFile, path,
@@ -72,4 +83,15 @@ internal static class ObservationValidator
 
         return new ValidationResult(diagnostics);
     }
+
+    private static string DescribeParameterIssue(ParameterParseIssue issue) => issue.Kind switch
+    {
+        ParameterParseIssueKind.MissingSeparator =>
+            $"Malformed BenchmarkDotNet parameter fragment at position {issue.FragmentIndex}: " +
+            $"'{issue.Fragment}' does not contain a '=' separator.",
+        ParameterParseIssueKind.EmptyKey =>
+            $"Malformed BenchmarkDotNet parameter fragment at position {issue.FragmentIndex}: " +
+            $"'{issue.Fragment}' has an empty parameter name.",
+        _ => $"Malformed BenchmarkDotNet parameter fragment at position {issue.FragmentIndex}: '{issue.Fragment}'.",
+    };
 }

@@ -79,10 +79,11 @@ public static class BenchmarkDotNetResultParser
     private static BenchmarkObservation CompileObservation(BdnBenchmarkDto benchmark)
     {
         // Trusts ObservationValidator has already confirmed Type, Method,
-        // and Statistics.Mean are present — this method does not re-check
-        // them, matching PolicyCompiler/BaselineCompiler's CompileValidated
-        // pattern (one implementation of each rule, not two).
-        var identity = IdentityFactory.TryCreate(benchmark)
+        // Statistics.Mean, and parameter-fragment well-formedness (BGV306)
+        // — this method does not re-check them, matching
+        // PolicyCompiler/BaselineCompiler's CompileValidated pattern (one
+        // implementation of each rule, not two).
+        var identity = IdentityFactory.Create(benchmark).Identity
             ?? throw new InvalidOperationException(
                 "CompileObservation called with an entry that did not pass ObservationValidator.");
 

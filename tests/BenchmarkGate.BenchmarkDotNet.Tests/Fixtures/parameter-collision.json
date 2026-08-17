@@ -1,0 +1,61 @@
+{
+  "Title": "ParameterCollision-report-full",
+  "HostEnvironmentInfo": {
+    "BenchmarkDotNetCaption": "BenchmarkDotNet",
+    "BenchmarkDotNetVersion": "0.14.0",
+    "OsVersion": "Linux",
+    "ProcessorName": "Unknown",
+    "RuntimeVersion": ".NET 10.0.0"
+  },
+  "Benchmarks": [
+    {
+      "DisplayInfo": "CollisionCase: DefaultJob [N1000000]",
+      "Namespace": "Recon.Benchmarks",
+      "Type": "Recon.Benchmarks.ClassificationBenchmarks",
+      "Method": "CollisionCase",
+      "MethodTitle": "CollisionCase",
+      "Parameters": "N1000000",
+      "FullName": "Recon.Benchmarks.ClassificationBenchmarks.CollisionCase(N1000000)",
+      "Statistics": {
+        "N": 15,
+        "Min": 4400000.0,
+        "Mean": 4540000.0,
+        "Median": 4510000.0,
+        "Max": 4700000.0,
+        "StandardDeviation": 85000.0,
+        "StandardError": 22000.0
+      },
+      "Memory": {
+        "Gen0Collections": 0,
+        "Gen1Collections": 0,
+        "Gen2Collections": 0,
+        "TotalOperations": 15,
+        "BytesAllocatedPerOperation": 0
+      }
+    },
+    {
+      "DisplayInfo": "CollisionCase: DefaultJob",
+      "Namespace": "Recon.Benchmarks",
+      "Type": "Recon.Benchmarks.ClassificationBenchmarks",
+      "Method": "CollisionCase",
+      "MethodTitle": "CollisionCase",
+      "FullName": "Recon.Benchmarks.ClassificationBenchmarks.CollisionCase()",
+      "Statistics": {
+        "N": 15,
+        "Min": 4400000.0,
+        "Mean": 4540000.0,
+        "Median": 4510000.0,
+        "Max": 4700000.0,
+        "StandardDeviation": 85000.0,
+        "StandardError": 22000.0
+      },
+      "Memory": {
+        "Gen0Collections": 0,
+        "Gen1Collections": 0,
+        "Gen2Collections": 0,
+        "TotalOperations": 15,
+        "BytesAllocatedPerOperation": 0
+      }
+    }
+  ]
+}

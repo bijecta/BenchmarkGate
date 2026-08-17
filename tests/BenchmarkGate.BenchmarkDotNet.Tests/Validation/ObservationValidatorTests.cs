@@ -147,6 +147,102 @@ public class ObservationValidatorTests
         descriptor.Id.Should().MatchRegex("^BGV3\\d{2}$");
     }
 
+    [Fact]
+    public void Missing_separator_fragment_reports_BGV306()
+    {
+        var benchmark = ValidBenchmark();
+        benchmark.Parameters = "N1000000";
+
+        var result = ObservationValidator.Validate(ValidDocument([benchmark]));
+
+        result.Diagnostics.Should().ContainSingle(d => d.Descriptor.Id == "BGV306");
+    }
+
+    [Fact]
+    public void Empty_key_fragment_reports_BGV306()
+    {
+        var benchmark = ValidBenchmark();
+        benchmark.Parameters = "=1000000";
+
+        var result = ObservationValidator.Validate(ValidDocument([benchmark]));
+
+        result.Diagnostics.Should().ContainSingle(d => d.Descriptor.Id == "BGV306");
+    }
+
+    [Fact]
+    public void BGV306_diagnostic_path_targets_the_parameters_field()
+    {
+        var benchmark = ValidBenchmark();
+        benchmark.Parameters = "N1000000";
+
+        var result = ObservationValidator.Validate(ValidDocument([benchmark]));
+
+        result.Diagnostics.Should().ContainSingle(d => d.Path == "/Benchmarks/0/Parameters");
+    }
+
+    [Fact]
+    public void BGV306_message_identifies_a_missing_separator_fragment()
+    {
+        var benchmark = ValidBenchmark();
+        benchmark.Parameters = "N1000000";
+
+        var result = ObservationValidator.Validate(ValidDocument([benchmark]));
+
+        result.Diagnostics.Single(d => d.Descriptor.Id == "BGV306").Message
+            .Should().Contain("N1000000").And.Contain("does not contain a '=' separator");
+    }
+
+    [Fact]
+    public void BGV306_message_identifies_an_empty_key_fragment()
+    {
+        var benchmark = ValidBenchmark();
+        benchmark.Parameters = "=1000000";
+
+        var result = ObservationValidator.Validate(ValidDocument([benchmark]));
+
+        result.Diagnostics.Single(d => d.Descriptor.Id == "BGV306").Message
+            .Should().Contain("=1000000").And.Contain("empty parameter name");
+    }
+
+    [Fact]
+    public void Multiple_malformed_fragments_in_one_benchmark_each_report_their_own_BGV306()
+    {
+        var benchmark = ValidBenchmark();
+        benchmark.Parameters = "Junk,=5";
+
+        var result = ObservationValidator.Validate(ValidDocument([benchmark]));
+
+        result.Diagnostics.Where(d => d.Descriptor.Id == "BGV306").Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void Well_formed_parameters_do_not_report_BGV306()
+    {
+        var benchmark = ValidBenchmark();
+        benchmark.Parameters = "N=1,M=2";
+
+        var result = ObservationValidator.Validate(ValidDocument([benchmark]));
+
+        result.Diagnostics.Should().NotContain(d => d.Descriptor.Id == "BGV306");
+    }
+
+    [Fact]
+    public void Missing_separator_fragment_that_drops_the_only_parameter_causes_a_collision_reported_as_BGV304_and_BGV306()
+    {
+        // Two benchmarks, same Type/Method/Job — one has a malformed
+        // parameter that parses to {}, the other has none at all. Once the
+        // fragment is dropped, both resolve to the same canonical identity.
+        var malformed = ValidBenchmark();
+        malformed.Parameters = "N1000000";
+        var parameterless = ValidBenchmark();
+        parameterless.Parameters = null;
+
+        var result = ObservationValidator.Validate(ValidDocument([malformed, parameterless]));
+
+        result.Diagnostics.Should().Contain(d => d.Descriptor.Id == "BGV306");
+        result.Diagnostics.Should().Contain(d => d.Descriptor.Id == "BGV304");
+    }
+
     public static IEnumerable<object[]> AllObservationDescriptors() =>
         ObservationValidatorDiagnostics.All.Select(d => new object[] { d });
 }

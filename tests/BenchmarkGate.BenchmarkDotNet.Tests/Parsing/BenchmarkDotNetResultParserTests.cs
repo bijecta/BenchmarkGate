@@ -3,7 +3,7 @@ using Bijecta.BenchmarkGate.Core.Model;
 using FluentAssertions;
 using Xunit;
 
-namespace Bijecta.BenchmarkGate.BenchmarkDotNet.Tests;
+namespace Bijecta.BenchmarkGate.BenchmarkDotNet.Tests.Parsing;
 
 public class BenchmarkDotNetResultParserTests
 {
@@ -142,5 +142,74 @@ public class BenchmarkDotNetResultParserTests
         var exception = act.Should().Throw<BenchmarkResultParseException>().Which;
         exception.ValidationResult.Should().NotBeNull();
         exception.ValidationResult!.Diagnostics.Should().ContainSingle(d => d.Descriptor.Id == "BGV305");
+    }
+
+    [Fact]
+    public void Malformed_parameter_fragment_throws_with_BGV306()
+    {
+        var act = () => BenchmarkDotNetResultParser.ParseFile(FixturePath("malformed-parameter.json"));
+
+        var exception = act.Should().Throw<BenchmarkResultParseException>().Which;
+        exception.ValidationResult.Should().NotBeNull();
+        exception.ValidationResult!.Diagnostics.Should().ContainSingle(d => d.Descriptor.Id == "BGV306");
+    }
+
+    [Fact]
+    public void Malformed_fragment_that_drops_the_only_parameter_can_collide_with_a_parameterless_benchmark()
+    {
+        // parameter-collision.json: two entries, same Type/Method/DisplayInfo —
+        // one has Parameters "N1000000" (malformed, parses to {}), the other
+        // has no Parameters at all — both resolve to the same canonical
+        // identity once the malformed fragment is dropped.
+        var act = () => BenchmarkDotNetResultParser.ParseFile(FixturePath("parameter-collision.json"));
+
+        var exception = act.Should().Throw<BenchmarkResultParseException>().Which;
+        exception.ValidationResult.Should().NotBeNull();
+        exception.ValidationResult!.Diagnostics.Should().Contain(d => d.Descriptor.Id == "BGV306");
+        exception.ValidationResult!.Diagnostics.Should().Contain(d => d.Descriptor.Id == "BGV304");
+    }
+
+    [Fact]
+    public void ParsePath_on_a_directory_with_no_json_files_throws_typed_exception()
+    {
+        var emptyDirectory = Path.Combine(AppContext.BaseDirectory, "Fixtures", "EmptyDirectory");
+        Directory.CreateDirectory(emptyDirectory);
+
+        var act = () => BenchmarkDotNetResultParser.ParsePath(emptyDirectory);
+
+        act.Should().Throw<BenchmarkResultParseException>()
+            .WithMessage("*No *.json result files found*");
+    }
+
+    [Fact]
+    public void ParsePath_on_a_nonexistent_path_throws_typed_exception()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "does-not-exist-at-all");
+
+        var act = () => BenchmarkDotNetResultParser.ParsePath(path);
+
+        act.Should().Throw<BenchmarkResultParseException>()
+            .WithMessage("*Results path does not exist*");
+    }
+
+    [Fact]
+    public void Document_that_deserializes_to_null_throws_typed_exception()
+    {
+        // null-document.json contains the literal JSON token `null`.
+        var act = () => BenchmarkDotNetResultParser.ParseFile(FixturePath("null-document.json"));
+
+        act.Should().Throw<BenchmarkResultParseException>()
+            .WithMessage("*deserialized to null*");
+    }
+
+    [Fact]
+    public void ParsePath_on_a_directory_with_valid_files_returns_merged_observations()
+    {
+        var directory = Path.Combine(AppContext.BaseDirectory, "Fixtures", "ValidMultiFile");
+
+        var observations = BenchmarkDotNetResultParser.ParsePath(directory);
+
+        observations.Should().HaveCount(2);
+        observations.Select(o => o.Identity.MethodName).Should().BeEquivalentTo(["MethodA", "MethodB"]);
     }
 }

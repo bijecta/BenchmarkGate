@@ -14,10 +14,13 @@ internal static class ObservationValidatorDiagnostics
         new("BGV304", "Duplicate benchmark identity within one file", Core.Validation.DiagnosticSeverity.Error);
     internal static readonly Core.Validation.DiagnosticDescriptor DuplicateIdentityAcrossFiles =
         new("BGV305", "Duplicate benchmark identity across result files", Core.Validation.DiagnosticSeverity.Error);
+    internal static readonly Core.Validation.DiagnosticDescriptor MalformedParameterFragment =
+        new("BGV306", "Malformed BenchmarkDotNet parameter fragment", Core.Validation.DiagnosticSeverity.Error);
 
     internal static IReadOnlyList<Core.Validation.DiagnosticDescriptor> All { get; } =
     [
         MissingBenchmarks, MissingType, MissingMethod, MissingMean,
         DuplicateIdentityWithinFile, DuplicateIdentityAcrossFiles,
+        MalformedParameterFragment,
     ];
 }
