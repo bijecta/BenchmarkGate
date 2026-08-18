@@ -4,6 +4,11 @@ All notable changes to BenchmarkGate are documented here.
 
 ## [Unreleased]
 
+### Added
+- Core `BenchmarkRun` and `BenchmarkEnvironment` domain model types (ADR-0006 Decisions 1–2): report-level environment metadata, kept separate from `BenchmarkIdentity`/`BenchmarkObservation`. `BenchmarkRun.Environment` is `null` when no environment document was supplied at all, distinct from a present-but-partial `BenchmarkEnvironment` where some dimensions were unavailable.
+- New Core-owned enums `BenchmarkArchitecture` and `BenchmarkHardwareTimerKind`, normalized from BenchmarkDotNet's own vocabulary (`BenchmarkDotNet.Environments.Platform`, `Perfolizer.Horology.HardwareTimerKind`) so persisted history is never coupled to a BenchmarkDotNet dependency. Both include an `Unknown` member for forward compatibility with future BenchmarkDotNet values.
+- New Core enums `EnvironmentCompatibilityRole` (`Filter`/`Advisory`/`None`) and `EnvironmentDimension` (one member per `BenchmarkEnvironment` field), laying groundwork for environment coherence and compatibility comparison in later v0.5.0 issues.
+
 ### Fixed
 - `BdnParameterStringParser` no longer silently discards malformed BenchmarkDotNet
   parameter fragments (e.g. `N1000000` missing its `=`, or `=1000000` with an empty
